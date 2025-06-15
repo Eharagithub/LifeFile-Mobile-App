@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import styles from './login.styles';
 import { useRouter } from 'expo-router';
 
@@ -39,7 +38,7 @@ const LoginScreen: React.FC = () => {
 
   // Handle signup navigation
   const handleSignup = () => {
-    router.push('/auth/signup');
+    router.push('/auth/patientAuth/signup');
   };
 
   return (
