@@ -1,15 +1,15 @@
-import { View, Text, Image, StyleSheet, Dimensions, ImageSourcePropType, TouchableOpacity } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import React, { useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+//import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 // Update these paths to your actual asset locations
 const pillsImg: ImageSourcePropType = require('../../assets/images/pills.png');
 const stethoscopeImg: ImageSourcePropType = require('../../assets/images/st.png');
 const bandageImg: ImageSourcePropType = require('../../assets/images/bandage.png');
-const logoImg: ImageSourcePropType = require('../../assets/images/logo.png');
+//const logoImg: ImageSourcePropType = require('../../assets/images/logo.png');
 // const injection: ImageSourcePropType = require('../../assets/images/injection.png');
 const plaster: ImageSourcePropType = require('../../assets/images/plaster.png');
 

@@ -87,7 +87,7 @@ export default function WelcomeScreen() {
     if (Platform.OS === 'web') {
       router.push({ pathname: './login' });
     } else {
-      router.push('/login' as any);
+      router.push('../auth/login' as any);
     }
   };
 
