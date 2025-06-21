@@ -97,11 +97,11 @@ export default function MedicalProfile() {
     }
 
     // Check userId
-    if (!userId) {
-      Alert.alert('Error', 'User ID is missing. Please sign up again.');
-      router.push('/auth/patientAuth/signup');
-      return;
-    }
+    // if (!userId) {
+    //   Alert.alert('Error', 'User ID is missing. Please sign up again.');
+    //   router.push('/auth/patientAuth/signup');
+    //   return;
+    // }
 
     try {
       setIsLoading(true);
