@@ -1,0 +1,10 @@
+
+# Ignore the liffile-auth-service.json file
+Backend/Auth_service/liffile-auth-service.json
+
+# Ignore the instruction file
+instruction.txt
+
+Backend/Auth_service/node_modules
+
+
