@@ -4,8 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import styles from './signup.styles';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-// import { db } from '../../config/firebaseConfig';
-// import { doc, setDoc } from 'firebase/firestore';
+//import { db } from '../../config/firebaseConfig';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function MedicalProfile() {
   const router = useRouter();
