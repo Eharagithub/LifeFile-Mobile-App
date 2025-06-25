@@ -15,6 +15,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import styles from './login.styles';
 import { firebase } from '../../config/firebaseConfig';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 // Define types for navigation
 type RootStackParamList = {
@@ -26,6 +27,7 @@ type RootStackParamList = {
 
 const LoginScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,36 +35,50 @@ const LoginScreen = () => {
   // Firebase login function
   const loginUser = async (email: string, password: string) => {
     try {
-      await firebase.auth().signInWithEmailAndPassword(email, password);
-      
+      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+      return { success: true, user: userCredential.user };
     } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert('Login Error', error.message);
-      } else {
-        Alert.alert('Login Error', 'An unknown error occurred');
-      }
+      return { success: false, error };
     }
   };
 
   // Handle login functionality
   const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Error', 'Please enter both email and password');
-    return;
-  }
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
 
-  setIsLoading(true);
+    setIsLoading(true);
   
-  try {
-    await loginUser(email, password);
-    // Show success message only if login is successful
-    Alert.alert('Login Success', 'Successfully logged in.');
-  } catch (error) {
-    Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      const result = await loginUser(email, password);
+      
+      if (result.success) {
+        Alert.alert(
+          'Login Success', 
+          'Successfully logged in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to patient home page
+                router.push('/patientProfile/patientHome');
+              }
+            }
+          ]
+        );
+      } else {
+        // We have the error from result.error but don't need to use it specifically
+        Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+      }
+    } catch (ignored) {
+      // We're using a generic error message regardless of the specific error
+      Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle signup navigation
   const handleSignup = () => {
@@ -202,7 +218,7 @@ const LoginScreen = () => {
 
         {/* Sign up Link */}
         <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Don not have an account? </Text>
+          <Text style={styles.signupText}>Do not have an account? </Text>
           <TouchableOpacity onPress={handleSignup}>
             <Text style={styles.signupLink}>Sign up</Text>
           </TouchableOpacity>
@@ -232,4 +248,3 @@ const LoginScreen = () => {
 };
 
 export default LoginScreen;
-//login
