@@ -4,8 +4,9 @@ import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import styles from './signup.styles';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-//import { db } from '../../config/firebaseConfig';
+import { db } from '../../../config/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
+import AuthService from '../../../services/authService';
 
 export default function MedicalProfile() {
   const router = useRouter();
@@ -97,11 +98,11 @@ export default function MedicalProfile() {
     }
 
     // Check userId
-    // if (!userId) {
-    //   Alert.alert('Error', 'User ID is missing. Please sign up again.');
-    //   router.push('/auth/patientAuth/signup');
-    //   return;
-    // }
+    if (!userId) {
+      Alert.alert('Error', 'User ID is missing. Please sign up again.');
+      router.push('/auth/patientAuth/signup');
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -127,30 +128,21 @@ export default function MedicalProfile() {
         updatedAt: new Date().toISOString()
       };
 
-      // Save to Firestore - update user document with health information
-    //   await setDoc(doc(db, "users", userId as string), 
-    //     { 
-    //       health: healthData,
-    //       registrationCompleted: true,
-    //       registrationCompletedAt: new Date().toISOString()
-    //     }, 
-    //     { merge: true }
-    //   );
-      
+      const result = await AuthService.saveHealthInformation(userId as string, healthData);
+    
+    if (result.success) {
       console.log('Health profile saved and registration completed for user:', userId);
-      
-      // Navigate to patient home page
       router.push('/patientProfile/patientHome');
-    } catch (error: any) {
-      console.error('Error saving health profile:', error);
-      Alert.alert(
-        'Save Failed', 
-        'Failed to save your health information. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
+    } else {
+      Alert.alert('Save Failed', result.error || 'Failed to save health information');
     }
-  };
+  } catch (error) {
+    console.error('Unexpected error saving health profile:', error);
+    Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // BMI calculation
   const handleBmi = () => {
