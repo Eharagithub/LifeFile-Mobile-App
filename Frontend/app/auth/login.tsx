@@ -72,7 +72,7 @@ const LoginScreen = () => {
         // We have the error from result.error but don't need to use it specifically
         Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
       }
-    } catch (ignored) {
+    } catch {
       // We're using a generic error message regardless of the specific error
       Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
     } finally {
@@ -80,9 +80,9 @@ const LoginScreen = () => {
     }
   };
 
-  // Handle signup navigation
+  // Handle signup navigation 
   const handleSignup = () => {
-    navigation.navigate('Signup');
+    router.push('/auth/patientAuth/signup');
   };
 
   // Handle forgot password

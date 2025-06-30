@@ -10,6 +10,11 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import styles from './signup.styles';
 import { useRouter } from 'expo-router';
+import { firebase } from '../../../config/firebaseConfig';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import AuthService from '../../../services/authService';
+
+
 
 const SignUp: React.FC = () => {
   const router = useRouter();
@@ -37,50 +42,30 @@ const SignUp: React.FC = () => {
     });
   };
 
-  const handleSignUp = () => { //temporary function to navigate
-    router.push('/auth/patientAuth/createProfile');
-  };
+  const handleSignUp = async () => {
+  if (!email || !password || !confirm) {
+    Alert.alert('Error', 'Please fill in all required fields');
+    return;
+  }
 
-  //  const handleSignUp = async () => {
-  //   if (!email || !password || !confirm) {
-  //     Alert.alert('Error', 'Please fill in all required fields');
-  //     return;
-  //   }
+  try {
+    setIsLoading(true);
+    const result = await AuthService.createUserAccount(email, password, confirm);
+    
+    if (result.success && result.uid) {
+      console.log('User created successfully with ID:', result.uid);
+      createProfile(result.uid);
+    } else {
+      Alert.alert('Signup Failed', result.error || 'Unknown error occurred');
+    }
+  } catch (error) {
+    console.error('Unexpected error during signup:', error);
+    Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-  //   if (password !== confirm) {
-  //     Alert.alert('Error', 'Passwords do not match');
-  //     return;
-  //   }
-
-  //   if (password.length < 6) {
-  //     Alert.alert('Error', 'Password must be at least 6 characters');
-  //     return;
-  //   }
-
-  //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  //   if (!emailRegex.test(email)) {
-  //     Alert.alert('Error', 'Please enter a valid email address');
-  //     return;
-  //   }
-
-    // try {
-    //   setIsLoading(true);
-    //   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    //   const uid = userCredential.user.uid;
-    //   console.log('User created with ID:', uid);
-      
-    //   setUserId(uid);
-    //   createProfile(uid);
-    // } catch (error: any) {
-    //   console.error('Signup error:', error);
-    //   Alert.alert(
-    //     'Signup Failed',
-    //     error.message || 'Failed to create account. Please try again.'
-    //   );
-    // } finally {
-    //   setIsLoading(false);
-    // }
-  // };
 
   return (
    

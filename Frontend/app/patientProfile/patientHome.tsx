@@ -4,9 +4,15 @@ import { Feather, FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/ve
 import styles from './patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
 import { useRouter } from 'expo-router';
-//import { auth, db } from '../../config/firebaseConfig';
+import { auth, db } from '../../config/firebaseConfig';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+
+// Add global type declaration for EventEmitter
+declare global {
+  // Replace 'any' with the actual type if you know it, e.g. EventEmitterType
+  var EventEmitter: any | undefined;
+}
 
 interface ArticleItem {
   id: string;
@@ -62,104 +68,104 @@ export default function PatientHome() {
   ];
 
   // Fetch user profile data
-//   useEffect(() => {
-//     const fetchUserProfile = async () => {
-//       try {
-//         const currentUser = auth.currentUser;
-//         if (!currentUser) {
-//           console.log("No user is signed in");
-//           router.replace('/login');
-//           return;
-//         }
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log("No user is signed in");
+          router.replace('../login');
+          return;
+        }
 
-//         console.log("Fetching profile for user ID:", currentUser.uid);
-//         const userId = currentUser.uid;
-//         const userDocRef = doc(db, "users", userId);
-//         const userDocSnap = await getDoc(userDocRef);
+        console.log("Fetching profile for user ID:", currentUser.uid);
+        const userId = currentUser.uid;
+        const userDocRef = doc(db, "users", userId);
+        const userDocSnap = await getDoc(userDocRef);
         
-//         if (userDocSnap.exists()) {
-//           console.log("User document found:", userDocSnap.id);
-//           const userData = userDocSnap.data();
-//           const personalData = userData.personal || {};
+        if (userDocSnap.exists()) {
+          console.log("User document found:", userDocSnap.id);
+          const userData = userDocSnap.data();
+          const personalData = userData.personal || {};
           
-//           // Log personal data to debug
-//           console.log("Personal data retrieved:", personalData);
+          // Log personal data to debug
+          console.log("Personal data retrieved:", personalData);
           
-//           const fullName = personalData.fullName || 'Guest';
+          const fullName = personalData.fullName || 'Guest';
           
-//           // Split full name into first name and last name
-//           const nameParts = fullName.trim().split(' ');
-//           const firstName = nameParts[0] || '';
-//           const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+          // Split full name into first name and last name
+          const nameParts = fullName.trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
           
-//           setUserProfile({
-//             fullName,
-//             firstName,
-//             lastName,
-//             profilePicture: personalData.profilePicture || ''
-//           });
+          setUserProfile({
+            fullName,
+            firstName,
+            lastName,
+            profilePicture: personalData.profilePicture || ''
+          });
           
-//           console.log(`User profile set: ${firstName} ${lastName}`);
-//         } else {
-//           console.log("No user document found for ID:", userId);
-//           // Handle the case when user document doesn't exist
-//           setUserProfile({
-//             fullName: 'Guest User',
-//             firstName: 'Guest',
-//             lastName: 'User',
-//             profilePicture: ''
-//           });
-//         }
-//       } catch (error) {
-//         console.error("Error fetching user data:", error);
-//         // Set default values on error
-//         setUserProfile({
-//           fullName: 'Guest User',
-//           firstName: 'Guest',
-//           lastName: 'User',
-//           profilePicture: ''
-//         });
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
+          console.log(`User profile set: ${firstName} ${lastName}`);
+        } else {
+          console.log("No user document found for ID:", userId);
+          // Handle the case when user document doesn't exist
+          setUserProfile({
+            fullName: 'Guest User',
+            firstName: 'Guest',
+            lastName: 'User',
+            profilePicture: ''
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        // Set default values on error
+        setUserProfile({
+          fullName: 'Guest User',
+          firstName: 'Guest',
+          lastName: 'User',
+          profilePicture: ''
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
     
-//     fetchUserProfile();
+    fetchUserProfile();
     
-//     // Add an auth state change listener to refresh profile when user changes
-//     const unsubscribe = auth.onAuthStateChanged((user) => {
-//       if (user) {
-//         fetchUserProfile();
-//       }
-//     });
+    // Add an auth state change listener to refresh profile when user changes
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchUserProfile();
+      }
+    });
     
-//     return () => unsubscribe();
-//   }, []);
+    return () => unsubscribe();
+  }, []);
 
-  // Handle user sign out
-//   const handleSignOut = async () => {
-//     try {
-//       await signOut(auth);
+//  Handle user sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
       
-//       // Trigger the USER_CHANGED event to clear form data across the app
-//       if (global.EventEmitter) {
-//         console.log("PatientHome: Emitting USER_CHANGED event for sign out");
-//         global.EventEmitter.emit('USER_CHANGED');
-//         // Debug to confirm listeners were notified
-//         global.EventEmitter.debug();
-//       } else {
-//         console.warn("PatientHome: EventEmitter not available for sign out");
-//       }
+      // Trigger the USER_CHANGED event to clear form data across the app
+      if (global.EventEmitter) {
+        console.log("PatientHome: Emitting USER_CHANGED event for sign out");
+        global.EventEmitter.emit('USER_CHANGED');
+        // Debug to confirm listeners were notified
+        global.EventEmitter.debug();
+      } else {
+        console.warn("PatientHome: EventEmitter not available for sign out");
+      }
       
-//       // Navigate back to login screen with replace to prevent going back
-//       setTimeout(() => {
-//         router.replace('/login');
-//       }, 100);
-//     } catch (error) {
-//       console.error('Error signing out:', error);
-//       Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');
-//     }
-//   };
+      // Navigate back to login screen with replace to prevent going back
+      setTimeout(() => {
+        router.replace('../common/welcomeScreen');
+      }, 100);
+    } catch (error) {
+      console.error('Error signing out:', error);
+      Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');
+    }
+  };
 
   const renderArticleItem = ({ item }: { item: ArticleItem }) => (
     <View style={styles.articleItem}>
@@ -205,7 +211,7 @@ export default function PatientHome() {
         {/* Sign Out Button */}
         <TouchableOpacity 
           style={styles.signOutButton} 
-          //onPress={handleSignOut}
+          onPress={handleSignOut}
         >
           <Feather name="log-out" size={16} color="#7d4c9e" />
           <Text style={styles.signOutText}>Sign Out</Text>
