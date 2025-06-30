@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 interface BottomNavigationProps {
   activeTab: 'home' | 'statistics' | 'notification' | 'profile';
@@ -11,12 +12,36 @@ export default function BottomNavigation({
   activeTab, 
   onTabPress = () => {} 
 }: BottomNavigationProps) {
-  
+  const router = useRouter();
+
+   const handleTabPress = (tabName: string) => {
+    // Call the optional onTabPress callback
+    onTabPress(tabName);
+    
+    // Handle navigation based on tab
+    switch (tabName) {
+      case 'home':
+        router.push('../patientProfile/patientHome'); 
+        break;
+      case 'statistics':
+        router.push('../patientProfile/statistics'); 
+        break;
+      case 'notification':
+        router.push('../patientProfile/notification'); 
+        break;
+      case 'profile':
+        router.push('./profile'); 
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('home')}
+        onPress={() => handleTabPress('home')}
       >
         <View style={[
           styles.tabIconContainer,
@@ -36,7 +61,7 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('statistics')}
+        onPress={() => handleTabPress('statistics')}
       >
         <Feather 
           name="bar-chart-2" 
@@ -51,7 +76,7 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('notification')}
+        onPress={() => handleTabPress('notification')}
       >
         <Feather 
           name="bell" 
@@ -66,7 +91,7 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('profile')}
+        onPress={() => handleTabPress('profile')}
       >
         <Feather 
           name="user" 

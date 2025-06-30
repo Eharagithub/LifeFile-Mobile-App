@@ -67,6 +67,11 @@ export default function PatientHome() {
     }
   ];
 
+ // Navigation handler for View History
+  const handleViewHistory = () => {
+    router.push('/patientProfile/viewhistory'); 
+  };
+
   // Fetch user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -230,23 +235,30 @@ export default function PatientHome() {
 
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleViewHistory}>
             <View style={styles.actionIconContainer}>
               <FontAwesome name="stethoscope" size={22} color="#fff" />
             </View>
             <Text style={styles.actionText}>View History</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={handleViewHistory}>
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="pill" size={24} color="#fff" />
             </View>
             <Text style={styles.actionText}>Allergies</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={handleViewHistory}>
             <View style={styles.actionIconContainer}>
               <FontAwesome name="file-text-o" size={22} color="#fff" />
             </View>
