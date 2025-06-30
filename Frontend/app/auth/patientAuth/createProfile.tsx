@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { db } from '../../../config/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 import AuthService from '../../../services/authService';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CreateProfile() {
     const router = useRouter();
@@ -28,6 +29,9 @@ export default function CreateProfile() {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear() - 30); // Default to 30 years ago
     const [showMonthDayPicker, setShowMonthDayPicker] = useState(false);
 
+    // Add new state for profile image
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+
     // Store the resetFormData function in a ref to avoid recreating it on each render
     const resetFormDataRef = useRef(() => {
         console.log("CreateProfile: Resetting form data");
@@ -38,6 +42,7 @@ export default function CreateProfile() {
         setAddress('');
         setContact('');
         setFileName('No file chosen');
+        setProfileImage(null); // Reset profile image
         setDate(new Date());
         setShowDatePicker(false);
     });
@@ -48,11 +53,78 @@ export default function CreateProfile() {
          resetFormDataRef.current();
      }, [userId]);
 
-    // Dummy file picker
-    const handleChooseFile = () => {
-        setFileName('profile.jpg');
+     // Request permissions for image picker and camera when component mounts
+    useEffect(() => {
+        (async () => {
+            if (Platform.OS !== 'web') {
+                const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (galleryStatus.status !== 'granted') {
+                    Alert.alert('Permission required', 'We need camera roll permissions to upload your profile picture.');
+                }
+                
+                const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+                if (cameraStatus.status !== 'granted') {
+                    Alert.alert('Permission required', 'We need camera permissions to take a profile picture.');
+                }
+            }
+        })();
+    }, []);
+
+    // Enhanced image picker with options for gallery or camera
+    const handleChooseFile = async () => {
+        Alert.alert(
+            "Select Image",
+            "Choose image from:",
+            [
+                {
+                    text: "Camera",
+                    onPress: () => pickImage("camera")
+                },
+                {
+                    text: "Gallery",
+                    onPress: () => pickImage("gallery")
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                }
+            ]
+        );
     };
 
+    // Function to handle image selection from either camera or gallery
+    const pickImage = async (source: "camera" | "gallery") => {
+        try {
+            let result;
+            const options = {
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1] as [number, number],
+                quality: 0.7,
+            };
+            
+            if (source === "camera") {
+                result = await ImagePicker.launchCameraAsync(options);
+            } else {
+                result = await ImagePicker.launchImageLibraryAsync(options);
+            }
+            
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const selectedAsset = result.assets[0];
+                setProfileImage(selectedAsset.uri);
+                
+                // Extract file name from URI or use a default name
+                const uriParts = selectedAsset.uri.split('/');
+                const fileName = uriParts[uriParts.length - 1];
+                setFileName(fileName || 'profile.jpg');
+            }
+        } catch (error) {
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to select image. Please try again.');
+        }
+    };
+
+    // Handle previous button click
     const handleSignup = () => {
         router.push('/auth/patientAuth/signup');
      };
@@ -80,7 +152,7 @@ export default function CreateProfile() {
       gender,
       address: address || '',
       contactNumber: contact || '',
-      profilePicture: fileName !== 'No file chosen' ? fileName : '',
+      profilePicture: profileImage || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -365,19 +437,74 @@ export default function CreateProfile() {
                     />
                 </View>
 
-                {/* Profile Picture */}
+                {/* Profile Picture - Enhanced UI */}
+                <Text style={styles.inputLabel}>
+                    Profile Picture
+                </Text>
                 <View style={styles.profileRow}>
-                    <View style={styles.profileAvatar}>
-                        <Feather name="user" size={36} style={styles.profileIcon} />
-                    </View>
+                    <TouchableOpacity 
+                        style={styles.profileAvatar}
+                        onPress={handleChooseFile}
+                    >
+                        {profileImage ? (
+                            <Image 
+                                source={{ uri: profileImage }} 
+                                style={{ 
+                                    width: 70, 
+                                    height: 70, 
+                                    borderRadius: 35,
+                                }} 
+                            />
+                        ) : (
+                            <View style={{
+                                width: 70,
+                                height: 70,
+                                borderRadius: 35,
+                                backgroundColor: '#f6f6f6',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#e4e4e4',
+                                position: 'relative',
+                            }}>
+                                <Feather name="user" size={36} style={styles.profileIcon} />
+                                <View style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    right: 0,
+                                    backgroundColor: '#7d4c9e',
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: 12,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}>
+                                    <Feather name="camera" size={14} color="#fff" />
+                                </View>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                     <View style={styles.profileTextCol}>
-                        <Text style={styles.profileLabel}>Profile Picture</Text>
+                        <Text style={styles.profileLabel}>Upload your profile photo</Text>
                         <View style={styles.fileRow}>
                             <TouchableOpacity style={styles.chooseFileBtn} onPress={handleChooseFile}>
                                 <Text style={styles.chooseFileText}>Choose File</Text>
                             </TouchableOpacity>
-                            <Text style={styles.fileName}>{fileName}</Text>
+                            <Text style={[styles.fileName, { flex: 1 }]} numberOfLines={1} ellipsizeMode="middle">
+                                {fileName}
+                            </Text>
                         </View>
+                        {profileImage && (
+                            <TouchableOpacity 
+                                style={{ marginTop: 8 }}
+                                onPress={() => {
+                                    setProfileImage(null);
+                                    setFileName('No file chosen');
+                                }}
+                            >
+                                <Text style={{ color: '#e24d4d', fontSize: 13 }}>Remove</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -387,11 +514,11 @@ export default function CreateProfile() {
                         <Text style={styles.previousBtnText} >Previous</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.nextBtn} onPress={goToHealthProfile}> 
-                        {/* {isLoading ? (
+                        {isLoading ? (
                             <ActivityIndicator size="small" color="#fff" />
-                        ) : ( */}
+                        ) : (
                             <Text style={styles.nextBtnText}>Next</Text>
-                        {/* /)} */}
+                        )}
                     </TouchableOpacity> 
                 </View>
             </ScrollView>
