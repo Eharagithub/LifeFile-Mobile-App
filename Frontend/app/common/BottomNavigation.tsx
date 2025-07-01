@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Feather,} from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'statistics' | 'notification' | 'profile';
+  activeTab: 'home' | 'statistics' | 'notification' | 'more';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -13,6 +14,7 @@ export default function BottomNavigation({
   onTabPress = () => {} 
 }: BottomNavigationProps) {
   const router = useRouter();
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
    const handleTabPress = (tabName: string) => {
     // Call the optional onTabPress callback
@@ -29,8 +31,9 @@ export default function BottomNavigation({
       case 'notification':
         router.push('../patientProfile/notification'); 
         break;
-      case 'profile':
-        router.push('./profile'); 
+      case 'more':
+        // Toggle side navigation drawer instead of navigating
+        setIsDrawerVisible(true);
         break;
       default:
         break;
@@ -38,7 +41,14 @@ export default function BottomNavigation({
   };
 
   return (
-    <View style={styles.container}>
+    <>
+      <SideNavigationDrawer
+        isVisible={isDrawerVisible}
+        onClose={() => setIsDrawerVisible(false)}
+      />
+      
+      <View style={styles.container}>
+      
       <TouchableOpacity 
         style={styles.tabButton} 
         onPress={() => handleTabPress('home')}
@@ -91,19 +101,20 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => handleTabPress('profile')}
+        onPress={() => handleTabPress('more')}
       >
         <Feather 
-          name="user" 
+          name="menu" 
           size={22} 
-          color={activeTab === 'profile' ? '#7d4c9e' : '#666'} 
+          color={activeTab === 'more' ? '#7d4c9e' : '#666'} 
         />
         <Text style={[
           styles.tabLabel,
-          activeTab === 'profile' && styles.activeTabLabel
-        ]}>Profile</Text>
+          activeTab === 'more' && styles.activeTabLabel
+        ]}>More</Text>
       </TouchableOpacity>
     </View>
+    </>
   );
 }
 

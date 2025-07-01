@@ -13,6 +13,7 @@ export default StyleSheet.create({
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 24,
   },
+  
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',

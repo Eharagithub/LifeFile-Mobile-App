@@ -3,6 +3,8 @@ import { View, Text, TextInput, Image, TouchableOpacity, SafeAreaView, ScrollVie
 import { Feather, FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import styles from './patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
+import SideNavigation from '../common/sideNavigation';
+
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../config/firebaseConfig';
 import { signOut } from 'firebase/auth';
