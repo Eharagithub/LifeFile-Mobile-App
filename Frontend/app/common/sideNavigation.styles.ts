@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 export default StyleSheet.create({
   // Modal Overlay
@@ -80,19 +80,21 @@ export default StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f8f8f8',
+    color: '#f0f0ff',
   },
   
   itemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    color: '#f0f0ff'
   },
   
   iconContainer: {
     width: 35,
     height: 35,
-    borderRadius: 8,
-    backgroundColor: '#f8f8f8',
+    // borderRadius: 8,
+    // backgroundColor: '#f8f8f8',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
