@@ -97,7 +97,7 @@ export default StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#f0f0f0',
-    marginVertical: 5,
+    marginVertical: 8,
   },
   
     // Filter Options Styles
@@ -171,5 +171,22 @@ export default StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginLeft: 4,
-  }
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    paddingHorizontal: 20,
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 15,
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+  },
 });
