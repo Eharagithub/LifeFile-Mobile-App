@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'statistics' | 'notification' | 'more';
+  activeTab: 'home' | 'statistics' | 'notification' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -53,16 +53,17 @@ export default function BottomNavigation({
         style={styles.tabButton} 
         onPress={() => handleTabPress('home')}
       >
-        <View style={[
+        {/* <View style={[
           styles.tabIconContainer,
           activeTab === 'home' && styles.activeTabIconContainer
-        ]}>
+        ]}> */}
+        
           <Feather 
             name="home" 
             size={22} 
-            color={activeTab === 'home' ? '#fff' : '#666'} 
+            color={activeTab === 'home' ? '#7d4c9e' : '#666'} 
           />
-        </View>
+        {/* </View> */}
         <Text style={[
           styles.tabLabel,
           activeTab === 'home' && styles.activeTabLabel

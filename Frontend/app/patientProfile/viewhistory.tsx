@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import styles from './viewhistory.styles'; 
+import styles from './viewhistory.styles';
 import BottomNavigation from '../common/BottomNavigation';
 
 interface HistoryItem {
@@ -19,6 +19,7 @@ interface HistoryItem {
   title: string;
   subtitle: string;
   icon: string;
+  
 }
 
 export default function ViewHistory() {
@@ -81,7 +82,7 @@ export default function ViewHistory() {
   };
 
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.historyItem}
       onPress={() => handleItemPress(item)}
       activeOpacity={0.7}
@@ -109,7 +110,7 @@ export default function ViewHistory() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}
         >
@@ -142,7 +143,10 @@ export default function ViewHistory() {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab="home" />
+      <BottomNavigation
+        activeTab="none" // Using 'none' to indicate no active tab
+        onTabPress={() => { }}
+      />
     </SafeAreaView>
   );
 }

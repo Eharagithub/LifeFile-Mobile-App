@@ -74,7 +74,12 @@ export default function PatientHome() {
     router.push('./viewhistory'); 
   };
 
-  // Navigation handler for View History
+   // Navigation handler for View Active medications
+  const handleMedications = () => {
+    router.push('./activemedications'); 
+  };
+
+  // Navigation handler for View labresults
   const handleLabResults = () => {
     router.push('./labresults'); 
   };
@@ -215,7 +220,7 @@ export default function PatientHome() {
           
           <TouchableOpacity 
             style={styles.actionButton} 
-            onPress={handleViewHistory}>
+            onPress={handleMedications}>
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="pill" size={24} color="#fff" />
             </View>

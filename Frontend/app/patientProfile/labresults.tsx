@@ -143,7 +143,7 @@ export default function LabReports() {
   };
 
   const renderLabReportItem = (report: LabReport) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       key={report.id}
       style={styles.labReportContainer}
       onPress={() => handleLabReportPress(report)}
@@ -225,7 +225,7 @@ export default function LabReports() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}
         >
@@ -288,7 +288,10 @@ export default function LabReports() {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab="home" />
+      <BottomNavigation
+        activeTab="none" // Using 'none' to indicate no active tab
+        onTabPress={() => { }}
+      />
     </SafeAreaView>
   );
 }
