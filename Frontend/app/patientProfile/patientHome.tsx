@@ -3,6 +3,8 @@ import { View, Text, TextInput, Image, TouchableOpacity, SafeAreaView, ScrollVie
 import { Feather, FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import styles from './patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
+import SideNavigation from '../common/sideNavigation';
+
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../config/firebaseConfig';
 import { signOut } from 'firebase/auth';
@@ -66,6 +68,21 @@ export default function PatientHome() {
       bookmarked: false
     }
   ];
+
+ // Navigation handler for View History
+  const handleViewHistory = () => {
+    router.push('./viewhistory'); 
+  };
+
+   // Navigation handler for View Active medications
+  const handleMedications = () => {
+    router.push('./activemedications'); 
+  };
+
+  // Navigation handler for View labresults
+  const handleLabResults = () => {
+    router.push('./labresults'); 
+  };
 
   // Fetch user profile data
   useEffect(() => {
@@ -142,30 +159,7 @@ export default function PatientHome() {
     return () => unsubscribe();
   }, []);
 
-//  Handle user sign out
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      
-      // Trigger the USER_CHANGED event to clear form data across the app
-      if (global.EventEmitter) {
-        console.log("PatientHome: Emitting USER_CHANGED event for sign out");
-        global.EventEmitter.emit('USER_CHANGED');
-        // Debug to confirm listeners were notified
-        global.EventEmitter.debug();
-      } else {
-        console.warn("PatientHome: EventEmitter not available for sign out");
-      }
-      
-      // Navigate back to login screen with replace to prevent going back
-      setTimeout(() => {
-        router.replace('../common/welcomeScreen');
-      }, 100);
-    } catch (error) {
-      console.error('Error signing out:', error);
-      Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');
-    }
-  };
+
 
   const renderArticleItem = ({ item }: { item: ArticleItem }) => (
     <View style={styles.articleItem}>
@@ -207,46 +201,35 @@ export default function PatientHome() {
             <Text style={styles.welcomeSubtitle}>How is it going today ?</Text>
           </View>
         </View>
-        
-        {/* Sign Out Button */}
-        <TouchableOpacity 
-          style={styles.signOutButton} 
-          onPress={handleSignOut}
-        >
-          <Feather name="log-out" size={16} color="#7d4c9e" />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-        
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={20} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search doctor, drugs, articles..."
-            placeholderTextColor="#aaa"
-          />
         </View>
-      </View>
+        
 
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleViewHistory}>
             <View style={styles.actionIconContainer}>
               <FontAwesome name="stethoscope" size={22} color="#fff" />
             </View>
             <Text style={styles.actionText}>View History</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={handleMedications}>
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="pill" size={24} color="#fff" />
             </View>
-            <Text style={styles.actionText}>Allergies</Text>
+            <Text style={styles.actionText}>Active Medications</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={handleLabResults}>
             <View style={styles.actionIconContainer}>
               <FontAwesome name="file-text-o" size={22} color="#fff" />
             </View>

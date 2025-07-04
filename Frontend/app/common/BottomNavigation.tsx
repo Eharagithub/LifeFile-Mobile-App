@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Feather,} from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'statistics' | 'notification' | 'profile';
+  activeTab: 'home' | 'statistics' | 'notification' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -11,23 +13,57 @@ export default function BottomNavigation({
   activeTab, 
   onTabPress = () => {} 
 }: BottomNavigationProps) {
-  
+  const router = useRouter();
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+
+   const handleTabPress = (tabName: string) => {
+    // Call the optional onTabPress callback
+    onTabPress(tabName);
+    
+    // Handle navigation based on tab
+    switch (tabName) {
+      case 'home':
+        router.push('../patientProfile/patientHome'); 
+        break;
+      case 'statistics':
+        router.push('../patientProfile/statistics'); 
+        break;
+      case 'notification':
+        router.push('../patientProfile/notification'); 
+        break;
+      case 'more':
+        // Toggle side navigation drawer instead of navigating
+        setIsDrawerVisible(true);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <>
+      <SideNavigationDrawer
+        isVisible={isDrawerVisible}
+        onClose={() => setIsDrawerVisible(false)}
+      />
+      
+      <View style={styles.container}>
+      
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('home')}
+        onPress={() => handleTabPress('home')}
       >
-        <View style={[
+        {/* <View style={[
           styles.tabIconContainer,
           activeTab === 'home' && styles.activeTabIconContainer
-        ]}>
+        ]}> */}
+        
           <Feather 
             name="home" 
             size={22} 
-            color={activeTab === 'home' ? '#fff' : '#666'} 
+            color={activeTab === 'home' ? '#7d4c9e' : '#666'} 
           />
-        </View>
+        {/* </View> */}
         <Text style={[
           styles.tabLabel,
           activeTab === 'home' && styles.activeTabLabel
@@ -36,7 +72,7 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('statistics')}
+        onPress={() => handleTabPress('statistics')}
       >
         <Feather 
           name="bar-chart-2" 
@@ -51,7 +87,7 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('notification')}
+        onPress={() => handleTabPress('notification')}
       >
         <Feather 
           name="bell" 
@@ -66,19 +102,20 @@ export default function BottomNavigation({
 
       <TouchableOpacity 
         style={styles.tabButton} 
-        onPress={() => onTabPress('profile')}
+        onPress={() => handleTabPress('more')}
       >
         <Feather 
-          name="user" 
+          name="menu" 
           size={22} 
-          color={activeTab === 'profile' ? '#7d4c9e' : '#666'} 
+          color={activeTab === 'more' ? '#7d4c9e' : '#666'} 
         />
         <Text style={[
           styles.tabLabel,
-          activeTab === 'profile' && styles.activeTabLabel
-        ]}>Profile</Text>
+          activeTab === 'more' && styles.activeTabLabel
+        ]}>More</Text>
       </TouchableOpacity>
     </View>
+    </>
   );
 }
 

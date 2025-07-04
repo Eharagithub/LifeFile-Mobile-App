@@ -7,12 +7,13 @@ export default StyleSheet.create({
   },
   header: {
     backgroundColor: '#f2e6ff',
-    paddingTop: 30,
+    paddingTop: 50,
     paddingBottom: 30,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
+    borderBottomLeftRadius: 4,
     borderBottomRightRadius: 24,
   },
+  
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
