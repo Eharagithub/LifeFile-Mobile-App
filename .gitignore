@@ -5,6 +5,5 @@ Backend/Auth_service/liffile-auth-service.json
 # Ignore the instruction file
 instruction.txt
 
-Backend/Auth_service/node_modules
-
-
+# Ignore the node_modules directory
+node_modules
