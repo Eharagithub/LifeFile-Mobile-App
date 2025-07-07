@@ -16,34 +16,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   
-  // // Loading styles
-  // loadingContainer: {
-  //   flex: 1,
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  //   backgroundColor: '#f8f9fa',
-  // },
-  // loadingText: {
-  //   marginTop: 16,
-  //   fontSize: 16,
-  //   color: '#666',
-  //   fontWeight: '500',
-  // },
-
-  // Header styles
-  // header: {
-  //   backgroundColor: '#fff',
-  //   paddingHorizontal: 20,
-  //   paddingTop: 20,
-  //   paddingBottom: 16,
-  //   borderBottomWidth: 1,
-  //   borderBottomColor: '#e9ecef',
-  //   elevation: 2,
-  //   shadowColor: '#000',
-  //   shadowOffset: { width: 0, height: 2 },
-  //   shadowOpacity: 0.1,
-  //   shadowRadius: 4,
-  // },
+  
   
   profileSection: {
     flexDirection: 'row',
