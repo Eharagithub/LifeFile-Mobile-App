@@ -311,7 +311,7 @@ export default function PatientHome() {
       onPress={() => Linking.openURL(item.link)}
     >
       <Image 
-        source={item.imageUrl ? { uri: item.imageUrl } : require('../../assets/images/covid19.jpeg')} 
+        source={item.imageUrl ? { uri: item.imageUrl } : require('../../assets/images/who.jpg')} 
         style={styles.articleImage} 
         resizeMode="cover"
       />

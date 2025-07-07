@@ -256,14 +256,14 @@ const styles = StyleSheet.create({
   },
   
   categoryBadge: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#dabaf5',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   
   categoryText: {
-    color: '#fff',
+    color: '#242324',
     fontSize: 10,
     fontWeight: 'bold',
   },
