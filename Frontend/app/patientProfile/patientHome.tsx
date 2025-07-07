@@ -166,14 +166,19 @@ export default function PatientHome() {
       const filteredHealthNews = filterHealthNews(healthNews);
       console.log(`Health-filtered news items: ${filteredHealthNews.length}`);
       
-      // Sort by priority and date
+      // Sort local news first, then by priority and date
       const sortedNews = filteredHealthNews.sort((a, b) => {
+        // First prioritize local news - always show local news at the top
+        if (a.isLocal && !b.isLocal) return -1;
+        if (!a.isLocal && b.isLocal) return 1;
+        
+        // For news of the same locality (both local or both global), sort by priority
         const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
         const priorityDiff = (priorityOrder[b.priority || 'low'] - priorityOrder[a.priority || 'low']);
         
         if (priorityDiff !== 0) return priorityDiff;
         
-        // If same priority, sort by date (newest first)
+        // Finally sort by date for news with the same locality and priority
         const dateA = new Date(a.date || '');
         const dateB = new Date(b.date || '');
         return dateB.getTime() - dateA.getTime();
@@ -452,7 +457,7 @@ export default function PatientHome() {
             <View style={styles.noNewsContainer}>
               <Ionicons name="newspaper-outline" size={64} color="#ccc" />
               <Text style={styles.noNewsText}>
-                No health news alerts available
+                Await to see health news alerts
               </Text>
               
               <TouchableOpacity 
@@ -460,7 +465,7 @@ export default function PatientHome() {
                 onPress={onRefresh}
               >
                 <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.refreshButtonText}>Refresh News</Text>
+                <Text style={styles.refreshButtonText}>Refresh field</Text>
               </TouchableOpacity>
             </View>
           ) : (
