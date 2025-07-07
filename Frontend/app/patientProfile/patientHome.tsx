@@ -1,28 +1,42 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Image, TouchableOpacity, SafeAreaView, ScrollView, FlatList, Alert } from 'react-native';
-import { Feather, FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { 
+  View, 
+  Text, 
+  Image, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  ScrollView, 
+  FlatList, 
+  Alert, 
+  Linking, 
+  ActivityIndicator, 
+  RefreshControl,
+  StatusBar
+} from 'react-native';
+import { FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import styles from './patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
-import SideNavigation from '../common/sideNavigation';
-
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../config/firebaseConfig';
-import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { getAllHealthNews } from '../../services/newsService';
 
 // Add global type declaration for EventEmitter
 declare global {
-  // Replace 'any' with the actual type if you know it, e.g. EventEmitterType
   var EventEmitter: any | undefined;
 }
 
-interface ArticleItem {
-  id: string;
+interface NewsItem {
   title: string;
-  date: string;
-  readTime: string;
-  image: any;
-  bookmarked: boolean;
+  link: string;
+  source?: string;
+  date?: string;
+  description?: string;
+  imageUrl?: string;
+  language?: string; // 'en', 'si', or other language codes
+  category?: 'health' | 'lifestyle' | 'medical' | 'wellness' | 'nutrition' | 'fitness';
+  priority?: 'high' | 'medium' | 'low'; // For urgent health alerts
+  isLocal?: boolean; // Sri Lankan vs Global news
 }
 
 interface UserProfile {
@@ -30,6 +44,13 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   profilePicture: string;
+}
+
+interface NewsStats {
+  totalNews: number;
+  localNews: number;
+  globalNews: number;
+  lastUpdated: string;
 }
 
 export default function PatientHome() {
@@ -40,46 +61,185 @@ export default function PatientHome() {
     lastName: '',
     profilePicture: ''
   });
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const articles: ArticleItem[] = [
-    {
-      id: '1',
-      title: 'The 25 Healthiest Fruits You Can Eat, According to a Nutritionist',
-      date: 'Jun 10, 2023',
-      readTime: '5min read',
-      image: require('../../assets/images/fruits.jpg'),
-      bookmarked: true
-    },
-    {
-      id: '2',
-      title: 'The Impact of COVID-19 on Healthcare Systems',
-      date: 'Jul 15, 2023',
-      readTime: '8min read',
-      image: require('../../assets/images/covid19.jpeg'),
-      bookmarked: false
-    },
-    {
-      id: '3',
-      title: 'The Impact of COVID-19 on Healthcare Systems',
-      date: 'Jul 15, 2023',
-      readTime: '8min read',
-      image: require('../../assets/images/covid19.jpeg'),
-      bookmarked: false
-    }
+  const [refreshing, setRefreshing] = useState(false);
+  const [newsStats, setNewsStats] = useState<NewsStats>({
+    totalNews: 0,
+    localNews: 0,
+    globalNews: 0,
+    lastUpdated: ''
+  });
+
+  // Health-related keywords for filtering (English and Sinhala)
+  const healthKeywords = [
+    // English keywords
+    'health', 'medical', 'hospital', 'doctor', 'medicine', 'disease', 'virus', 'covid', 'vaccine', 
+    'treatment', 'surgery', 'patient', 'clinic', 'pharmacy', 'wellness', 'fitness', 'nutrition',
+    'diet', 'exercise', 'mental health', 'diabetes', 'cancer', 'heart', 'blood pressure',
+    'cholesterol', 'obesity', 'epidemic', 'pandemic', 'symptom', 'diagnosis', 'therapy',
+    'healthcare', 'medication', 'pharmaceutical', 'medical research', 'clinical trial',
+    
+    // Sinhala keywords (transliterated)
+    'සෞඛ්‍ය', 'වෛද්‍ය', 'රෝහල', 'ඖෂධ', 'රෝග', 'ප්‍රතිකාර', 'ශල්‍යකර්ම', 'රෝගී', 'ක්ලිනික්',
+    'ෆාමසි', 'සෞඛ්‍ය සේවා', 'මානසික සෞඛ්‍ය', 'දියවැඩියාව', 'පිළිකා', 'හෘද', 'රුධිර පීඩනය',
+    'කොලෙස්ටරෝල්', 'තරබාරුකම', 'වසංගත', 'ලක්ෂණ', 'රෝග විනිශ්චය', 'චිකිත්සාව'
   ];
 
- // Navigation handler for View History
+  // Categorize news based on content
+  const categorizeNews = (title: string, description: string = ''): NewsItem['category'] => {
+    const content = `${title} ${description}`.toLowerCase();
+    
+    if (content.includes('fitness') || content.includes('exercise') || content.includes('workout') || 
+        content.includes('gym') || content.includes('sport')) {
+      return 'fitness';
+    }
+    if (content.includes('nutrition') || content.includes('diet') || content.includes('food') || 
+        content.includes('vitamin') || content.includes('mineral')) {
+      return 'nutrition';
+    }
+    if (content.includes('wellness') || content.includes('mental') || content.includes('stress') || 
+        content.includes('meditation') || content.includes('yoga')) {
+      return 'wellness';
+    }
+    if (content.includes('lifestyle') || content.includes('living') || content.includes('habit')) {
+      return 'lifestyle';
+    }
+    if (content.includes('medical') || content.includes('clinical') || content.includes('surgery') || 
+        content.includes('treatment') || content.includes('doctor')) {
+      return 'medical';
+    }
+    return 'health';
+  };
+
+  // Filter health-related news
+  const filterHealthNews = (newsItems: NewsItem[]): NewsItem[] => {
+    return newsItems.filter(item => {
+      const content = `${item.title} ${item.description || ''}`.toLowerCase();
+      return healthKeywords.some(keyword => 
+        content.includes(keyword.toLowerCase()) || 
+        item.title.toLowerCase().includes(keyword.toLowerCase())
+      );
+    })
+    .map(item => ({
+      ...item,
+      category: categorizeNews(item.title, item.description),
+      isLocal: isLocalSource(item.source || ''),
+      priority: getPriority(item.title, item.description || '')
+    }));
+  };
+
+  // Check if source is local (Sri Lankan)
+  const isLocalSource = (source: string): boolean => {
+    const localSources = ['esana', 'helakuru', 'ada derana', 'hiru', 'lanka news', 'ceylon today', 'daily mirror'];
+    return localSources.some(localSource => 
+      source.toLowerCase().includes(localSource.toLowerCase())
+    );
+  };
+
+  // Get priority based on urgent health keywords
+  const getPriority = (title: string, description: string): NewsItem['priority'] => {
+    const content = `${title} ${description}`.toLowerCase();
+    const urgentKeywords = ['outbreak', 'epidemic', 'pandemic', 'alert', 'warning', 'emergency', 'crisis'];
+    const highPriorityKeywords = ['vaccine', 'treatment', 'breakthrough', 'study', 'research'];
+    
+    if (urgentKeywords.some(keyword => content.includes(keyword))) {
+      return 'high';
+    }
+    if (highPriorityKeywords.some(keyword => content.includes(keyword))) {
+      return 'medium';
+    }
+    return 'low';
+  };
+
+  // Enhanced news loading with health filtering
+  const loadNews = async () => {
+    setLoading(true);
+    try {
+      console.log('Loading health news...');
+      
+      // Get health-related news from the API
+      const healthNews = await getAllHealthNews();
+      console.log(`Raw news items received: ${healthNews.length}`);
+      
+      // Filter only health and lifestyle related news
+      const filteredHealthNews = filterHealthNews(healthNews);
+      console.log(`Health-filtered news items: ${filteredHealthNews.length}`);
+      
+      // Sort local news first, then by priority and date
+      const sortedNews = filteredHealthNews.sort((a, b) => {
+        // First prioritize local news - always show local news at the top
+        if (a.isLocal && !b.isLocal) return -1;
+        if (!a.isLocal && b.isLocal) return 1;
+        
+        // For news of the same locality (both local or both global), sort by priority
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        const priorityDiff = (priorityOrder[b.priority || 'low'] - priorityOrder[a.priority || 'low']);
+        
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort by date for news with the same locality and priority
+        const dateA = new Date(a.date || '');
+        const dateB = new Date(b.date || '');
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      setNews(sortedNews);
+      
+      // Update statistics
+      const localCount = sortedNews.filter(item => item.isLocal).length;
+      const globalCount = sortedNews.length - localCount;
+      
+      setNewsStats({
+        totalNews: sortedNews.length,
+        localNews: localCount,
+        globalNews: globalCount,
+        lastUpdated: new Date().toLocaleString()
+      });
+      
+      console.log(`News loaded successfully: ${localCount} local, ${globalCount} global`);
+      
+    } catch (error) {
+      console.error("Error loading health news:", error);
+      Alert.alert(
+        "Error Loading Health News", 
+        "Unable to fetch the latest health news alerts. Please check your internet connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Enhanced refresh with better user feedback
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadNews();
+    } catch (error) {
+      console.error("Error refreshing health news:", error);
+      Alert.alert(
+        "Error Refreshing", 
+        "Unable to refresh health news alerts. Please try again later."
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Load news on component mount
+  useEffect(() => {
+    loadNews();
+  }, []);
+
+  // Navigation handlers
   const handleViewHistory = () => {
     router.push('./viewhistory'); 
   };
 
-   // Navigation handler for View Active medications
   const handleMedications = () => {
     router.push('./activemedications'); 
   };
 
-  // Navigation handler for View labresults
   const handleLabResults = () => {
     router.push('./labresults'); 
   };
@@ -95,22 +255,15 @@ export default function PatientHome() {
           return;
         }
 
-        console.log("Fetching profile for user ID:", currentUser.uid);
         const userId = currentUser.uid;
         const userDocRef = doc(db, "users", userId);
         const userDocSnap = await getDoc(userDocRef);
         
         if (userDocSnap.exists()) {
-          console.log("User document found:", userDocSnap.id);
           const userData = userDocSnap.data();
           const personalData = userData.personal || {};
           
-          // Log personal data to debug
-          console.log("Personal data retrieved:", personalData);
-          
           const fullName = personalData.fullName || 'Guest';
-          
-          // Split full name into first name and last name
           const nameParts = fullName.trim().split(' ');
           const firstName = nameParts[0] || '';
           const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
@@ -121,11 +274,7 @@ export default function PatientHome() {
             lastName,
             profilePicture: personalData.profilePicture || ''
           });
-          
-          console.log(`User profile set: ${firstName} ${lastName}`);
         } else {
-          console.log("No user document found for ID:", userId);
-          // Handle the case when user document doesn't exist
           setUserProfile({
             fullName: 'Guest User',
             firstName: 'Guest',
@@ -135,21 +284,17 @@ export default function PatientHome() {
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
-        // Set default values on error
         setUserProfile({
           fullName: 'Guest User',
           firstName: 'Guest',
           lastName: 'User',
           profilePicture: ''
         });
-      } finally {
-        setLoading(false);
       }
     };
     
     fetchUserProfile();
     
-    // Add an auth state change listener to refresh profile when user changes
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserProfile();
@@ -157,29 +302,66 @@ export default function PatientHome() {
     });
     
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-
-
-  const renderArticleItem = ({ item }: { item: ArticleItem }) => (
-    <View style={styles.articleItem}>
-      <Image source={item.image} style={styles.articleImage} />
+  // Enhanced news item renderer with priority indicators
+  const renderNewsItem = ({ item }: { item: NewsItem }) => (
+    <TouchableOpacity 
+      style={[styles.articleItem]} 
+      onPress={() => Linking.openURL(item.link)}
+    >
+      <Image 
+        source={item.imageUrl ? { uri: item.imageUrl } : require('../../assets/images/who.jpg')} 
+        style={styles.articleImage} 
+        resizeMode="cover"
+      />
+      
       <View style={styles.articleContent}>
+        <View style={styles.articleHeader}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{item.category?.toUpperCase()}</Text>
+          </View>
+          {item.isLocal && (
+            <View style={styles.localBadge}>
+              <Text style={styles.localText}>🇱🇰 LOCAL</Text>
+            </View>
+          )}
+        </View>
+        
         <Text style={styles.articleTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.articleMeta}>{item.date} • {item.readTime}</Text>
+        
+        {item.description && (
+          <Text style={styles.articleDescription} numberOfLines={2}>{item.description}</Text>
+        )}
+        
+        <View style={styles.articleMetaContainer}>
+          <View style={styles.articleMetaLeft}>
+            <Text style={styles.articleMeta}>
+              {item.source ? `${item.source}` : ''} 
+              {item.source && item.date ? ' • ' : ''} 
+              {item.date ? new Date(item.date).toLocaleDateString() : ''}
+            </Text>
+          </View>
+          {item.language && (
+            <View style={styles.languageTag}>
+              <Text style={styles.languageTagText}>
+                {item.language === 'si' ? 'සිං' : 'ENG'}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
+      
       <TouchableOpacity style={styles.bookmarkButton}>
-        <FontAwesome 
-          name={item.bookmarked ? "bookmark" : "bookmark-o"} 
-          size={18} 
-          color={item.bookmarked ? "#7d4c9e" : "#888"} 
-        />
+        <FontAwesome name="bookmark-o" size={18} color="#888" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.profileSection}>
@@ -196,22 +378,32 @@ export default function PatientHome() {
             />
           )}
           <View style={styles.welcomeText}>
-            <Text style={styles.welcomeTitle}>welcome !</Text>
+            <Text style={styles.welcomeTitle}>Welcome!</Text>
             <Text style={styles.userName}>{userProfile.firstName || 'User'}</Text>
-            <Text style={styles.welcomeSubtitle}>How is it going today ?</Text>
+            <Text style={styles.welcomeSubtitle}>Stay updated with your health</Text>
           </View>
         </View>
-        </View>
-        
+      </View>
 
       {/* Main Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#874691']}
+            title="Refreshing health news..."
+          />
+        }
+      >
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={handleViewHistory}>
+            onPress={handleViewHistory}
+          >
             <View style={styles.actionIconContainer}>
               <FontAwesome name="stethoscope" size={22} color="#fff" />
             </View>
@@ -220,16 +412,18 @@ export default function PatientHome() {
           
           <TouchableOpacity 
             style={styles.actionButton} 
-            onPress={handleMedications}>
+            onPress={handleMedications}
+          >
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="pill" size={24} color="#fff" />
             </View>
-            <Text style={styles.actionText}>Active Medications</Text>
+            <Text style={styles.actionText}>Medications</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.actionButton} 
-            onPress={handleLabResults}>
+            onPress={handleLabResults}
+          >
             <View style={styles.actionIconContainer}>
               <FontAwesome name="file-text-o" size={22} color="#fff" />
             </View>
@@ -237,22 +431,54 @@ export default function PatientHome() {
           </TouchableOpacity>
         </View>
 
-        {/* Health Articles */}
+        {/* Health News Section */}
         <View style={styles.articlesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Health article</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllLink}>See all</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Health News Alerts</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.refreshIconButton} onPress={onRefresh}>
+                <Ionicons name="refresh" size={20} color="#874691" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <FlatList
-            data={articles}
-            renderItem={renderArticleItem}
-            keyExtractor={item => item.id}
-            scrollEnabled={false}
-          />
-        </View>
+          
+          {/* Last Updated Info */}
+          <View style={styles.lastUpdatedContainer}>
+            <Ionicons name="time" size={16} color="#666" />
+            <Text style={styles.lastUpdatedText}>
+              Last updated: {newsStats.lastUpdated}
+            </Text>
+          </View>
+
+          {/* News List*/}
+          {loading ? (
+            
+            <View style={styles.noNewsContainer}>
+              <Ionicons name="newspaper-outline" size={64} color="#ccc" />
+              <Text style={styles.noNewsText}>
+                Await to see health news alerts
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.refreshButton} 
+                onPress={onRefresh}
+              >
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.refreshButtonText}>Refresh field</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={news}
+              renderItem={renderNewsItem}
+              keyExtractor={(item, index) => `${item.link}-${index}`}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+        </View> 
       </ScrollView>
 
       {/* Bottom Navigation */}

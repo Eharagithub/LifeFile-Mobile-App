@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "axios": "^1.10.0",
+    "fast-xml-parser": "^5.2.5"
+  }
+}
