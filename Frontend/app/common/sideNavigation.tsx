@@ -91,25 +91,12 @@ export default function SideNavigation({
     },
     {
       id: '5',
-      title: 'FAQs',
-      icon: 'message-circle',
+      title: 'Profile',
+      icon: 'user',
       iconLibrary: 'Feather',
-      route: './faqs'
+      route: '../patientProfile/profilePage'
     },
-    {
-      id: '6',
-      title: 'About',
-      icon: 'info',
-      iconLibrary: 'Feather',
-      route: './about'
-    },
-    {
-      id: '7',
-      title: 'Settings',
-      icon: 'settings',
-      iconLibrary: 'Feather',
-      route: './settings'
-    },
+   
     {
       id: '8',
       title: 'Logout',
