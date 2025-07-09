@@ -10,10 +10,9 @@ const styles = StyleSheet.create({
    header: {
     backgroundColor: '#f2e6ff',
     paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 24,
+    paddingBottom: 20,
+    paddingHorizontal:35,
+    
   },
   
   
@@ -60,14 +59,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-     padding: 20,
+    padding: 20,
+   
   },
 
   // Quick Actions styles
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    
+    backgroundColor: '#f2e6ff',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius:24,
   },
   
   actionButton: {
@@ -82,7 +85,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7d4c9e',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   
   actionText: {
@@ -90,6 +93,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
     textAlign: 'center',
+     marginBottom: 10,
   },
 
   // Articles Section styles
@@ -101,13 +105,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 6,
+    marginLeft: 15,
+    marginRight: 20,
+    marginTop: 20,
   },
   
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#222',
+   
   },
   
   headerActions: {
@@ -132,6 +140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingHorizontal: 4,
+    marginLeft: 15,
   },
   
   lastUpdatedText: {
