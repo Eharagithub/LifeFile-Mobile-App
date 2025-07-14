@@ -12,7 +12,7 @@ import {
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import styles from './doctorSearch.styles';
-import BottomNavigation from '../common/BottomNavigation';
+import BottomNavigation from '../../../common/BottomNavigation';
 
 interface Doctor {
   docid: string;
@@ -214,7 +214,7 @@ export default function DoctorSearch() {
                             activeOpacity={0.7}
                         >
                             <Image
-                                source={require('../../assets/images/profile.jpg')}
+                                source={require('../../../../assets/images/profile.jpg')}
                                 style={styles.doctorImage}
                             />
                             <View style={styles.doctorInfo}>

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Feather, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import styles from './labresults.styles';
+import styles from './labReports/labresults.styles';
 import BottomNavigation from '../common/BottomNavigation';
 
 export default function Notifications() {

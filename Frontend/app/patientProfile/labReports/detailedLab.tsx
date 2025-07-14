@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import BottomNavigation from '../common/BottomNavigation';
+
 
 interface LabResult {
   name: string;
@@ -118,8 +118,6 @@ export default function DetailedLab() {
 
         {/* Floating Action Buttons - Remove since options are now in dropdown */}
       </View>
-
-     
 
       {/* Overlay to close options menu when touching outside */}
       {showOptionsMenu && (

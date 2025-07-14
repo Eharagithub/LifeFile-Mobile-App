@@ -23,13 +23,13 @@ export default function BottomNavigation({
     // Handle navigation based on tab
     switch (tabName) {
       case 'home':
-        router.push('../patientProfile/patientHome'); 
+        router.push('../../../patientProfile/patientHome'); 
         break;
       case 'statistics':
-        router.push('../patientProfile/statistics'); 
+        router.push('../../../patientProfile/statistics'); 
         break;
       case 'notification':
-        router.push('../patientProfile/notification'); 
+        router.push('../../../patientProfile/notification'); 
         break;
       case 'more':
         // Toggle side navigation drawer instead of navigating

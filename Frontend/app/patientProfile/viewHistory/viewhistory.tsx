@@ -11,7 +11,7 @@ import {
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import styles from './viewhistory.styles';
-import BottomNavigation from '../common/BottomNavigation';
+import BottomNavigation from '../../common/BottomNavigation';
 
 interface HistoryItem {
   id: string;

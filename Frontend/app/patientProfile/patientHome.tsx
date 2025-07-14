@@ -14,7 +14,7 @@ import {
   StatusBar
 } from 'react-native';
 import { FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import styles from './patientHome.styles';
+import styles from '../patientProfile/patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../config/firebaseConfig';
@@ -233,7 +233,7 @@ export default function PatientHome() {
 
   // Navigation handlers
   const handleViewHistory = () => {
-    router.push('./viewhistory');
+    router.push('./viewHistory/viewhistory');
   };
 
   const handleMedications = () => {
@@ -241,7 +241,7 @@ export default function PatientHome() {
   };
 
   const handleLabResults = () => {
-    router.push('./labresults');
+    router.push('./labReports/labresults ');
   };
 
   // Fetch user profile data

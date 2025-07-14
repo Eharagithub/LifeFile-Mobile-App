@@ -13,9 +13,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './profilePage.styles'; 
-import BottomNavigation from '../common/BottomNavigation';
-import { auth } from '../../config/firebaseConfig';
-import AuthService from '../../services/authService';
+import BottomNavigation from '../../../common/BottomNavigation';
+import { auth } from '../../../../config/firebaseConfig';
+import AuthService from '../../../../services/authService';
 
 interface ProfileStats {
   age: string;
@@ -180,7 +180,7 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
       title: 'My Saved',
       icon: 'heart-outline',
       color: '#673AB7',
-      route: '/patientProfile/viewhistory'
+      route: '/patientProfile/viewHistory/viewhistory'
     },
     {
       id: 'appointment',
@@ -194,7 +194,7 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
       title: 'Edit Profile',
       icon: 'person-outline',
       color: '#673AB7',
-      route: '/patientProfile/editProfile'
+      route: '/patientProfile/more/patientProfilee/editProfile'
     },
     {
       id: 'faqs',

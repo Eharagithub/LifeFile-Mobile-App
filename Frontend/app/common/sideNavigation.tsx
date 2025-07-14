@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { auth } from '../../config/firebaseConfig';
 import { signOut } from 'firebase/auth';
 import styles from './sideNavigation.styles';
+import { push } from 'expo-router/build/global-state/routing';
 
 interface SideNavigationProps {
   isVisible: boolean;
@@ -66,14 +67,14 @@ export default function SideNavigation({
       title: 'Home',
       icon: 'home',
       iconLibrary: 'Feather',
-      route: './patientHome'
+      route: '../../../patientProfile/patientHome'
     },
     {
       id: '2',
       title: 'Doctor Search',
       icon: 'search',
       iconLibrary: 'Feather',
-      route: '../patientProfile/doctorSearch'
+      route: '../../../patientProfile/more/doctorSearch/doctorSearch'
     },
     {
       id: '3',
@@ -94,7 +95,7 @@ export default function SideNavigation({
       title: 'Profile',
       icon: 'user',
       iconLibrary: 'Feather',
-      route: '../patientProfile/profilePage'
+      route: '../../../patientProfile/more/patientProfilee/profilePage'
     },
    
     {

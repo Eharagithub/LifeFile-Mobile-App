@@ -12,7 +12,7 @@ import {
 import { Feather, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import styles from './labresults.styles';
-import BottomNavigation from '../common/BottomNavigation';
+import BottomNavigation from '../../common/BottomNavigation';
 
 interface LabResult {
   name: string;
@@ -115,7 +115,7 @@ export default function LabReports() {
   const handleLabReportPress = (report: LabReport) => {
     // Navigate to detailed lab report view
     router.push({
-      pathname: '/patientProfile/detailedLab',
+      pathname: '/patientProfile/labReports/detailedLab',
       params: {
         reportId: report.id,
         reportName: report.name,
