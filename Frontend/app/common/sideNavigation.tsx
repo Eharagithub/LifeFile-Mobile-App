@@ -54,7 +54,7 @@ export default function SideNavigation({
       }
 
       onClose();
-      router.replace('../common/welcomeScreen');
+      router.replace('../../../common/welcomeScreen');
     } catch (error) {
       console.error('Error signing out:', error);
       Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');

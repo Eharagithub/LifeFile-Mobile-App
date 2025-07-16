@@ -405,7 +405,7 @@ export default function PatientHome() {
           <View style={styles.actionIconContainer}>
             <MaterialCommunityIcons name="pill" size={24} color="#fff" />
           </View>
-          <Text style={styles.actionText}>Medications</Text>
+          <Text style={styles.actionText}>Active Medications</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
