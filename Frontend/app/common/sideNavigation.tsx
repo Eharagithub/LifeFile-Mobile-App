@@ -88,7 +88,7 @@ export default function SideNavigation({
       title: 'Health Tips',
       icon: 'heart',
       iconLibrary: 'AntDesign',
-      route: '../patientProfile/healthTips'
+      route: '../../../patientProfile/more/patientProfilee/healthtips'
     },
     {
       id: '5',

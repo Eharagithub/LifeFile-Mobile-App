@@ -9,7 +9,6 @@ import {
   FlatList,
   Alert,
   Linking,
-  ActivityIndicator,
   RefreshControl,
   StatusBar
 } from 'react-native';
