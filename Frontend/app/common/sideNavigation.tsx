@@ -71,7 +71,7 @@ export default function SideNavigation({
     },
     {
       id: '2',
-      title: 'Doctor Search',
+      title: 'Find  a Doctor',
       icon: 'search',
       iconLibrary: 'Feather',
       route: '../../../patientProfile/more/doctorSearch/doctorSearch'
@@ -81,11 +81,11 @@ export default function SideNavigation({
       title: 'Uploads',
       icon: 'upload',
       iconLibrary: 'Feather',
-      route: './uploads'
+      route: '../../../patientProfile/more/patientProfilee/uploads'
     },
     {
       id: '4',
-      title: 'Health Tips',
+      title: 'Wellness Hub',
       icon: 'heart',
       iconLibrary: 'AntDesign',
       route: '../../../patientProfile/more/patientProfilee/healthtips'

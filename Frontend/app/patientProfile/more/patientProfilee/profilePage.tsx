@@ -184,35 +184,35 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
     },
     {
       id: 'appointment',
-      title: 'Appointment',
+      title: 'My Alerts',
       icon: 'calendar-outline',
       color: '#673AB7',
       route: '/patientProfile/notification'
     },
     {
       id: 'edit',
-      title: 'Edit Profile',
+      title: 'My Profile',
       icon: 'person-outline',
       color: '#673AB7',
       route: '/patientProfile/more/patientProfilee/editProfile'
     },
     {
       id: 'faqs',
-      title: 'FAQs',
+      title: 'Help Center',
       icon: 'help-circle-outline',
       color: '#673AB7',
       route: '../common/faqs'
     },
     {
       id: 'About',
-      title: 'About',
+      title: 'About LifeFile',
       icon: 'information-circle-outline',
       color: '#673AB7',
       route: '../common/about'
     },
     {
       id: 'Settings',
-      title: 'Settings',
+      title: 'LifeFile Settings',
       icon: 'settings-outline',
       color: '#673AB7',
       route: '../common/settings'
