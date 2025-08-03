@@ -2,17 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  FlatList,
-  Dimensions,
-  StatusBar,
-  Image,
-  RefreshControl,
 } from 'react-native';
-import { Feather, FontAwesome5, MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Feather,  } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import styles from './healthtips.styles';
 import BottomNavigation from '../../../common/BottomNavigation';

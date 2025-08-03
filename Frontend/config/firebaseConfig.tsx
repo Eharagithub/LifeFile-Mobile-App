@@ -3,6 +3,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Web app's Firebase configuration
 const firebaseConfig = {
@@ -23,4 +24,5 @@ if (!firebase.apps.length) {
 // Export auth and firestore instances
 export const auth = firebase.auth();
 export const db = firebase.firestore();
+export const storage = getStorage(firebase.app()); // Get modular storage from compat app
 export {firebase};

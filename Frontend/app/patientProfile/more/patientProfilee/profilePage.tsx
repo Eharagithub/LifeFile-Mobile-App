@@ -194,7 +194,7 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
       title: 'My Profile',
       icon: 'person-outline',
       color: '#673AB7',
-      route: '/patientProfile/more/patientProfilee/editProfile'
+      route: '/patientProfile/more/patientProfilee/MyProfile'
     },
     {
       id: 'faqs',
