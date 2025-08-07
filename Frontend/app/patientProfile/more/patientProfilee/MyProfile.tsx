@@ -17,6 +17,8 @@ import styles from './MyProfile.styles';
 
 // Import the new EditProfileModal component
 import EditProfileModal from './editProfile/personalinfooredit';
+//import ChangePw from './editProfile/changepw';
+import ContactInfor from './editProfile/contactInfor';
 
 // Firebase imports from firebaseConfig.ts
 import { db, storage, auth } from '../../../../config/firebaseConfig';
@@ -102,6 +104,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
+  const [changePwVisible, setChangePwVisible] = useState<boolean>(false);
+  const [contactInfor, setContactInfor] = useState<boolean>(false);
   const router = useRouter();
 
   // Get current user ID from Firebase Auth
@@ -335,19 +339,29 @@ const FirestoreMyProfileScreen: React.FC = () => {
     setEditModalVisible(false);
   };
 
-  // Function to handle profile save from modal
-  const handleSaveProfile = async (updatedData: Partial<UserData>) => {
-    await updateUserProfile(updatedData);
+  // // Function to handle profile save from modal
+  // const handleSaveProfile = async (updatedData: Partial<UserData>) => {
+  //   await updateUserProfile(updatedData);
+  // };
+
+  // Navigate to change password screen
+  const handleChangePassword = () => {   
+    setChangePwVisible(true);
   };
 
-  const handleChangePassword = () => {
-    // Navigate to change password screen
-    console.log('Change Password pressed');
+  // Function to handle modal close
+  const handleClosechangePw = () => {
+     setChangePwVisible(false);
   };
 
-  const handleContactInformation = () => {
-    // Navigate to contact info screen
-    console.log('Contact Information pressed');
+  // Navigate to contact info screen
+  const handleContactInformation = () => {   
+   setContactInfor(true);
+  };
+
+  // Function to handle modal close
+  const handleCloseContactInformation = () => {
+     setContactInfor(false);
   };
 
   const handleUpdateHealthProfile = () => {
@@ -500,24 +514,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
           />
         </View>
 
-        {/* Quick Stats Section
-        <View style={[styles.quickStatsContainer]}>
-          <Text style={[styles.quickStatsTitle]}>Quick Health Stats</Text>
-          <View style={styles.quickStatsRow}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#8B5CF6' }]}>12</Text>
-              <Text style={styles.statLabel}>Reports</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#8B5CF6' }]}>8</Text>
-              <Text style={styles.statLabel}>Appointments</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#8B5CF6' }]}>95%</Text>
-              <Text style={styles.statLabel}>Health Score</Text>
-            </View>
-          </View>
-        </View> */}
+        
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -525,6 +522,18 @@ const FirestoreMyProfileScreen: React.FC = () => {
         visible={editModalVisible}
         userData={userData}
         onClose={handleCloseEditModal}
+       
+      />
+      {/* <ChangePw
+        visible={changePwVisible}
+        userData={userData}
+        onClose={handleClosechangePw}
+       
+      /> */}
+      <ContactInfor
+        visible={contactInfor}
+        userData={userData}
+        onClose={handleCloseContactInformation}
        
       />
     </SafeAreaView>
