@@ -9,7 +9,6 @@ import {
   Platform,
   ScrollView,
   Alert,
-  ActivityIndicator,
   Dimensions,
   StyleSheet
 } from 'react-native';

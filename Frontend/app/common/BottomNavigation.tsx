@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather,} from '@expo/vector-icons';
+import { Feather, } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import SideNavigationDrawer from './sideNavigation';
 
@@ -10,9 +10,9 @@ interface BottomNavigationProps {
 }
 
 
-export default function BottomNavigation({ 
-  activeTab, 
-  onTabPress = () => {} 
+export default function BottomNavigation({
+  activeTab,
+  onTabPress = () => { }
 }: BottomNavigationProps) {
   const router = useRouter();
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
@@ -25,13 +25,13 @@ export default function BottomNavigation({
     onTabPress(tabName);
     switch (tabName) {
       case 'home':
-        router.push('../../../patientProfile/patientHome'); 
+        router.push('../../../patientProfile/patientHome');
         break;
       case 'statistics':
-        router.push('../../../patientProfile/statistics'); 
+        router.push('../../../patientProfile/statistics');
         break;
       case 'notification':
-        router.push('../../../patientProfile/notification'); 
+        router.push('../../../patientProfile/notification');
         break;
       case 'more':
         setIsDrawerVisible(true);
@@ -47,69 +47,69 @@ export default function BottomNavigation({
         isVisible={isDrawerVisible}
         onClose={() => setIsDrawerVisible(false)}
       />
-      
+
       <View style={styles && styles.container}>
-      
-      <TouchableOpacity 
-        style={styles && styles.tabButton} 
-        onPress={() => handleTabPress('home')}
-      >
-        <Feather 
-          name="home" 
-          size={22} 
-          color={shouldHighlight && activeTab === 'home' ? '#7d4c9e' : '#666'} 
-        />
-        <Text style={styles && [ 
-          styles.tabLabel, 
-          shouldHighlight && activeTab === 'home' && styles.activeTabLabel 
-        ]}>Home</Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles && styles.tabButton} 
-        onPress={() => handleTabPress('statistics')}
-      >
-        <Feather 
-          name="bar-chart-2" 
-          size={22} 
-          color={shouldHighlight && activeTab === 'statistics' ? '#7d4c9e' : '#666'} 
-        />
-        <Text style={styles && [ 
-          styles.tabLabel, 
-          shouldHighlight && activeTab === 'statistics' && styles.activeTabLabel 
-        ]}>Statistics</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles && styles.tabButton}
+          onPress={() => handleTabPress('home')}
+        >
+          <Feather
+            name="home"
+            size={22}
+            color={shouldHighlight && activeTab === 'home' ? '#7d4c9e' : '#666'}
+          />
+          <Text style={styles && [
+            styles.tabLabel,
+            shouldHighlight && activeTab === 'home' && styles.activeTabLabel
+          ]}>Home</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles && styles.tabButton} 
-        onPress={() => handleTabPress('notification')}
-      >
-        <Feather 
-          name="bell" 
-          size={22} 
-          color={shouldHighlight && activeTab === 'notification' ? '#7d4c9e' : '#666'} 
-        />
-        <Text style={styles && [ 
-          styles.tabLabel, 
-          shouldHighlight && activeTab === 'notification' && styles.activeTabLabel 
-        ]}>Notification</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles && styles.tabButton}
+          onPress={() => handleTabPress('statistics')}
+        >
+          <Feather
+            name="bar-chart-2"
+            size={22}
+            color={shouldHighlight && activeTab === 'statistics' ? '#7d4c9e' : '#666'}
+          />
+          <Text style={styles && [
+            styles.tabLabel,
+            shouldHighlight && activeTab === 'statistics' && styles.activeTabLabel
+          ]}>Statistics</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles && styles.tabButton} 
-        onPress={() => handleTabPress('more')}
-      >
-        <Feather 
-          name="menu" 
-          size={22} 
-          color={shouldHighlight && activeTab === 'more' ? '#7d4c9e' : '#666'} 
-        />
-        <Text style={styles && [ 
-          styles.tabLabel, 
-          shouldHighlight && activeTab === 'more' && styles.activeTabLabel 
-        ]}>More</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={styles && styles.tabButton}
+          onPress={() => handleTabPress('notification')}
+        >
+          <Feather
+            name="bell"
+            size={22}
+            color={shouldHighlight && activeTab === 'notification' ? '#7d4c9e' : '#666'}
+          />
+          <Text style={styles && [
+            styles.tabLabel,
+            shouldHighlight && activeTab === 'notification' && styles.activeTabLabel
+          ]}>Notification</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles && styles.tabButton}
+          onPress={() => handleTabPress('more')}
+        >
+          <Feather
+            name="menu"
+            size={22}
+            color={shouldHighlight && activeTab === 'more' ? '#7d4c9e' : '#666'}
+          />
+          <Text style={styles && [
+            styles.tabLabel,
+            shouldHighlight && activeTab === 'more' && styles.activeTabLabel
+          ]}>More</Text>
+        </TouchableOpacity>
+      </View>
     </>
   );
 }

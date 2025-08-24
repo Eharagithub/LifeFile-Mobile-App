@@ -17,22 +17,22 @@ import styles from './MyProfile.styles';
 
 // Import the new EditProfileModal component
 import EditProfileModal from './editProfile/personalinfooredit';
-//import ChangePw from './editProfile/changepw';
+import ChangePw from './editProfile/changepw';
 import ContactInfor from './editProfile/contactInfor';
 
 // Firebase imports from firebaseConfig.ts
 import { db, storage, auth } from '../../../../config/firebaseConfig';
-import { 
-  doc, 
-  getDoc, 
-  updateDoc, 
-  setDoc 
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc
 } from 'firebase/firestore';
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject 
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 } from 'firebase/storage';
 
 interface UserData {
@@ -41,8 +41,6 @@ interface UserData {
   profilePicture?: string;
   contactNumber?: string;
   dateOfBirth?: string;
-  bloodType?: string;
-  emergencyContact?: string;
 }
 
 interface ProfileItemProps {
@@ -79,7 +77,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
       </View>
       {showEditIcon && (
         <View >
-          <MaterialIcons name="edit" size={16}  />
+          <MaterialIcons name="edit" size={16} />
         </View>
       )}
     </TouchableOpacity>
@@ -139,7 +137,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
           email: currentUser?.email || "",
           profilePicture: currentUser?.photoURL || "",
         };
-        
+
         await userDocRef.set(defaultUserData);
         setUserData(defaultUserData);
       }
@@ -160,10 +158,10 @@ const FirestoreMyProfileScreen: React.FC = () => {
     try {
       const userDocRef = db.collection("users").doc(userId);
       await userDocRef.update(updatedData);
-      
+
       // Update local state
       setUserData(prev => prev ? { ...prev, ...updatedData } : null);
-      
+
       Alert.alert("Success", "Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -178,22 +176,22 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
     try {
       setUploading(true);
-      
+
       // Convert URI to blob
       const response = await fetch(uri);
       const blob = await response.blob();
-      
+
       // Create a reference to the storage location
       const fileExtension = uri.split('.').pop();
       const fileName = `profile_${userId}_${Date.now()}.${fileExtension}`;
       const storageRef = ref(storage, `profileImages/${fileName}`);
-      
+
       // Upload the blob
       await uploadBytes(storageRef, blob);
-      
+
       // Get download URL
       const downloadURL = await getDownloadURL(storageRef);
-      
+
       return downloadURL;
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -205,7 +203,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
   const deleteOldProfileImage = async (imageUrl: string) => {
     if (!imageUrl || !imageUrl.includes('firebasestorage')) return;
-    
+
     try {
       // Extract the path from the URL
       const storageRef = ref(storage, imageUrl);
@@ -225,22 +223,22 @@ const FirestoreMyProfileScreen: React.FC = () => {
       'Profile Picture',
       'Choose an option',
       [
-        { 
-          text: 'Take Photo', 
-          onPress: () => takePhoto() 
+        {
+          text: 'Take Photo',
+          onPress: () => takePhoto()
         },
-        { 
-          text: 'Choose from Gallery', 
-          onPress: () => pickImage() 
+        {
+          text: 'Choose from Gallery',
+          onPress: () => pickImage()
         },
-        { 
-          text: 'Remove Photo', 
+        {
+          text: 'Remove Photo',
           onPress: () => removePhoto(),
           style: 'destructive'
         },
-        { 
-          text: 'Cancel', 
-          style: 'cancel' 
+        {
+          text: 'Cancel',
+          style: 'cancel'
         },
       ]
     );
@@ -265,12 +263,12 @@ const FirestoreMyProfileScreen: React.FC = () => {
         const imageUri = result.assets[0].uri;
         try {
           const downloadURL = await uploadProfileImage(imageUri);
-          
+
           // Delete old profile image if exists
           if (userData?.profilePicture) {
             await deleteOldProfileImage(userData.profilePicture);
           }
-          
+
           // Update Firestore with new profile image URL
           await updateUserProfile({ profilePicture: downloadURL });
         } catch (error) {
@@ -301,12 +299,12 @@ const FirestoreMyProfileScreen: React.FC = () => {
         const imageUri = result.assets[0].uri;
         try {
           const downloadURL = await uploadProfileImage(imageUri);
-          
+
           // Delete old profile image if exists
           if (userData?.profilePicture) {
             await deleteOldProfileImage(userData.profilePicture);
           }
-          
+
           // Update Firestore with new profile image URL
           await updateUserProfile({ profilePicture: downloadURL });
         } catch (error) {
@@ -345,23 +343,23 @@ const FirestoreMyProfileScreen: React.FC = () => {
   // };
 
   // Navigate to change password screen
-  const handleChangePassword = () => {   
+  const handleChangePassword = () => {
     setChangePwVisible(true);
   };
 
   // Function to handle modal close
   const handleClosechangePw = () => {
-     setChangePwVisible(false);
+    setChangePwVisible(false);
   };
 
   // Navigate to contact info screen
-  const handleContactInformation = () => {   
-   setContactInfor(true);
+  const handleContactInformation = () => {
+    setContactInfor(true);
   };
 
   // Function to handle modal close
   const handleCloseContactInformation = () => {
-     setContactInfor(false);
+    setContactInfor(false);
   };
 
   const handleUpdateHealthProfile = () => {
@@ -437,12 +435,12 @@ const FirestoreMyProfileScreen: React.FC = () => {
               <Ionicons name="camera" size={16} color="#ffffff" />
             </View>
           </TouchableOpacity>
-          
+
           <Text style={styles.userName}>{userData?.fullName || 'User'}</Text>
           <Text style={styles.userEmail}>{userData?.email || 'No email provided'}</Text>
-          
-        
-          
+
+
+
           {/* Health Status Indicator */}
           <View style={[styles.healthStatusContainer, { backgroundColor: '#8B5CF620' }]}>
             <View style={[styles.healthStatusDot, { backgroundColor: '#8B5CF6' }]} />
@@ -514,7 +512,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
           />
         </View>
 
-        
+
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -522,19 +520,26 @@ const FirestoreMyProfileScreen: React.FC = () => {
         visible={editModalVisible}
         userData={userData}
         onClose={handleCloseEditModal}
-       
+
       />
       {/* <ChangePw
         visible={changePwVisible}
         userData={userData}
-        onClose={handleClosechangePw}
-       
+        onClose={handleClosechangePw}       
       /> */}
+
+      <ChangePw
+        visible={changePwVisible}
+        onClose={handleClosechangePw}
+        phoneNumber={userData?.phoneNumber} // Add this line
+      />
+
+
       <ContactInfor
         visible={contactInfor}
         userData={userData}
         onClose={handleCloseContactInformation}
-       
+
       />
     </SafeAreaView>
   );

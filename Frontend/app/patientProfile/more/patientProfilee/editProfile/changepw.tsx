@@ -1,434 +1,228 @@
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   Modal,
-//   KeyboardAvoidingView,
-//   Platform,
-//   ScrollView,
-//   Alert,
-//   ActivityIndicator,
-//   Dimensions,
-//   StyleSheet
-// } from 'react-native';
-// import { Feather, } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  Modal, View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../../../../../config/firebaseConfig'; 
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+// Mailjet API credentials (move to env or backend for production)
+const MAILJET_API_KEY = '948706932835dab7124eeac007e991e3';
+const MAILJET_API_SECRET = 'de3b30027cccfa3800cfccaae6847d0d';
+// ---------------------------------------------
 
-// // Firebase imports
-// import { db, auth } from '../../../../../config/firebaseConfig';
+interface ChangePwProps {
+  visible: boolean;
+  onClose: () => void;
+}
 
-// interface changepwProps {
-//   visible: boolean;
-//   onClose: () => void;
-//   userData: {
-//     fullName?: string;
-//     dateOfBirth?: string;
-//     nic?: string;
-//     gender?: string;
-//     email?: string; // Added email to userData interface
-//     [key: string]: any; // Allow other properties
-//   } | null;
-// }
+type SecurityStep = 'reauthenticate' | 'verifyEmailOtp';
 
-// const changepwScreen: React.FC<changepwProps> = ({
-//   visible,
-//   onClose,
-//   userData,
-// }) => {
-//   const [fullName, setFullName] = useState<string>('');
-//   const [dateOfBirth, setDateOfBirth] = useState<string>('');
-//   const [nic, setNic] = useState<string>('');
-//   const [gender, setGender] = useState<string>('');
-//   const [email, setEmail] = useState<string>(''); // State for email
-//   const [isDatePickerVisible, setDatePickerVisibility] = useState<boolean>(false);
-//   const [isGenderPickerVisible, setGenderPickerVisibility] = useState<boolean>(false);
-//   const [loading, setLoading] = useState<boolean>(false);
+export const ChangePw: React.FC<ChangePwProps> = ({ visible, onClose }) => {
+  const [step, setStep] = useState<SecurityStep>('reauthenticate');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-//   // Get current user ID from Firebase Auth
-//   const currentUser = auth.currentUser;
-//   const userId = currentUser ? currentUser.uid : null;
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
-//   // Pre-fill form with existing user data when modal becomes visible
-//   useEffect(() => {
-//     if (visible) {
-//       // Fetch data from Firestore user document (personal is a map field)
-//       const fetchPersonalData = async () => {
-//         if (!userId) {
-//           console.error("No user is signed in");
-//           return;
-//         }
-//         try {
-//           setLoading(true);
-//           const userDocRef = db.collection('users').doc(userId);
-//           const doc = await userDocRef.get();
-//           if (doc.exists) {
-//             const data = doc.data();
-//             // Access data from the 'personal' map field
-//             setFullName(data?.personal?.fullName || '');
-//             setDateOfBirth(data?.personal?.dateOfBirth || '');
-//             setNic(data?.personal?.nic || '');
-//             setGender(data?.personal?.gender || '');
-//           } else {
-//             // If user document doesn't exist, initialize with empty values
-//             setFullName('');
-//             setDateOfBirth('');
-//             setNic('');
-//             setGender('');
-//           }
-//         } catch (error) {
-//           console.error("Error fetching personal data:", error);
-//           Alert.alert("Error", "Failed to load personal data.");
-//         } finally {
-//           setLoading(false);
-//         }
-//       };
+  // Step 1: Check old password and trigger the email OTP
+  const handleReauthentication = async () => {
+    setError(null);
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return setError('Please fill in all password fields.');
+    }
+    if (newPassword !== confirmPassword) {
+      return setError('The new passwords do not match.');
+    }
 
-//       fetchPersonalData();
-//       setEmail(currentUser?.email || ''); // Always get email from currentUser
-//     }
-//   }, [visible, userId, currentUser]);
+    setLoading(true);
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      setLoading(false);
+      return setError('You are not logged in correctly.');
+    }
 
+    try {
+      // First, check if the old password is correct
+      const credential = EmailAuthProvider.credential(user.email, oldPassword);
+      await reauthenticateWithCredential(user, credential);
 
+      // --- Password is correct, now send the email OTP ---
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Save the OTP and an expiry time in Firestore
+      const otpRef = doc(db, 'passwordChangeOtps', user.uid);
+      await setDoc(otpRef, {
+        otp: generatedOtp,
+        createdAt: serverTimestamp(),
+      });
 
-//   const handleSubmit = async () => {
-//     if (!userId) {
-//       Alert.alert('Error', 'You must be logged in to update your profile.');
-//       return;
-//     }
+      // --- Send email using Mailjet REST API via fetch ---
+      const mailjetUrl = 'https://api.mailjet.com/v3.1/send';
+      const mailjetBody = {
+        Messages: [
+          {
+            From: {
+              Email: 'no-reply@yourdomain.com', // Use a verified sender email from your Mailjet account
+              Name: 'LifeFile - A Smart Health Record & Consultation Companion',
+            },
+            To: [
+              {
+                Email: user.email,
+                Name: user.displayName || 'Valued User',
+              },
+            ],
+            Subject: 'Your Password Change Verification Code',
+            HTMLPart: `
+              <h3>Security Verification</h3>
+              <p>Hello,</p>
+              <p>To finish changing your password, please use the following verification code:</p>
+              <h2 style="font-size: 28px; letter-spacing: 4px; text-align: center;">${generatedOtp}</h2>
+              <p>This code will expire in 10 minutes. If you did not request this change, please secure your account immediately.</p>
+            `,
+          },
+        ],
+      };
+      const mailjetResponse = await fetch(mailjetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa(`${MAILJET_API_KEY}:${MAILJET_API_SECRET}`),
+        },
+        body: JSON.stringify(mailjetBody),
+      });
+      if (!mailjetResponse.ok) {
+        throw new Error('Failed to send verification email.');
+      }
 
-//     // Basic validation
-//     if (!fullName.trim()) {
-//       Alert.alert('Error', 'Please enter your full name.');
-//       return;
-//     }
+      setStep('verifyEmailOtp'); // Move to the next screen
 
-//     try {
-//       setLoading(true);
+    } catch (err: any) {
+      console.error('Error during re-auth or email sending:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('The old password you entered is incorrect.');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-//       // Prepare updated data for the 'personal' map field
-//       const updatedPersonalData = {
-//         fullName: fullName.trim(),
-//         dateOfBirth: dateOfBirth,
-//         nic: nic.trim(),
-//         gender: gender,
-//         updatedAt: new Date(), // Update timestamp
-//       };
+  // Step 2: Check the email OTP and finalize the password change
+  const handleOtpVerification = async () => {
+    setError(null);
+    if (!otpCode || otpCode.length !== 6) {
+      return setError('Please enter the 6-digit code from your email.');
+    }
 
-//       // Update the 'personal' map field within the user document
-//       const userDocRef = db.collection('users').doc(userId);
-//       await userDocRef.update({ personal: updatedPersonalData });
+    setLoading(true);
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return setError('You are not logged in.');
+    }
 
-//       setLoading(false);
-//       Alert.alert('Success', 'Profile updated successfully!');
-//       onClose(); // Close the modal after successful update
-//     } catch (error) {
-//       setLoading(false);
-//       console.error('Error updating profile:', error);
-//       Alert.alert('Error', 'Failed to update profile. Please try again.');
-//     }
-//   };
+    try {
+      const otpRef = doc(db, 'passwordChangeOtps', user.uid);
+      const otpDoc = await getDoc(otpRef);
 
-//   const handleCancel = () => {
-//     // Reset form and close modal - re-fetch data to ensure latest state
-//     onClose();
-//   };
+      if (!otpDoc.exists()) throw new Error('No OTP found. Please try again.');
 
-//   return (
-//     <Modal
-//       visible={visible}
-//       animationType="fade"
-//       transparent={true}
-//       onRequestClose={handleCancel}
-//       statusBarTranslucent={true}
-//     >
-//       <View style={styles.backdrop}>
-//         <KeyboardAvoidingView
-//           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-//           style={styles.keyboardAvoidingView}
-//           keyboardVerticalOffset={0}
-//         >
-//           <View style={styles.popupContainer}>
-//             <ScrollView
-//               contentContainerStyle={styles.scrollViewContent}
-//               showsVerticalScrollIndicator={false}
-//               keyboardShouldPersistTaps="handled"
-//               bounces={false}
-//             >
-//               <View style={styles.header}>
-//                 <TouchableOpacity
-//                   onPress={handleCancel}
-//                   disabled={loading}
-//                   activeOpacity={0.7}
-//                 >
-//                   <Feather name="x" size={24} color="#000306ff" />
+      const { otp: savedOtp, createdAt } = otpDoc.data();
+      const timeDiffMinutes = (new Date().getTime() - createdAt.toDate().getTime()) / 60000;
 
-//                 </TouchableOpacity>
-//                 <Text style={styles.modalTitle}>Change Password</Text>
-               
-                
-             
-//               </View>
-//               <View style={styles.inputGroup}>
-//                 <Text style={styles.inputLabel}>Old Password</Text>
-//                 <TextInput
-//                   style={styles.textInput}
-//                   value={email}
-//                   editable={false} // Make email read-only
-//                   pointerEvents="none" // Prevent interaction
-//                 />
-//               </View>
+      if (savedOtp !== otpCode) throw new Error('The code you entered is incorrect.');
+      if (timeDiffMinutes > 10) throw new Error('The code has expired. Please try again.');
 
-//               <View style={styles.inputGroup}>
-//                 <Text style={styles.inputLabel}>Full Name</Text>
-//                 <TextInput
-//                   style={styles.textInput}
-//                   placeholder="Enter your Full Name"
-//                   value={fullName}
-//                   onChangeText={setFullName}
-//                   autoCapitalize="words"
-//                 />
-//               </View>
+      // --- OTP is correct! Now, finally update the password ---
+      await updatePassword(user, newPassword);
 
-              
-//               <View style={styles.inputGroup}>
-//                 <Text style={styles.inputLabel}>NIC</Text>
-//                 <TextInput
-//                   style={styles.textInput}
-//                   placeholder="Enter your NIC"
-//                   value={nic}
-//                   onChangeText={setNic}
-//                   keyboardType="default"
-//                 />
-//               </View>
+      Alert.alert(
+        'Password Changed Successfully',
+        'Your password has been updated. You will now be logged out for security.',
+        [{ text: 'OK', onPress: () => auth.signOut().then(handleClose) }]
+      );
 
-              
-//               <TouchableOpacity
-//                   style={styles.submitButton}
-//                   onPress={handleSubmit}
-//                   disabled={loading}
-//                   activeOpacity={0.7}
-//                 >
-//                   {loading ? (
-//                     <ActivityIndicator size="small" color="#ffffff" />
-//                   ) : (
-//                     <Text style={styles.submitButtonText}>Submit</Text>
-//                   )}
-//                 </TouchableOpacity>
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-              
-//             </ScrollView>
-//           </View>
-//         </KeyboardAvoidingView>
-//       </View>
-//     </Modal>
-//   );
-// };
+  // Function to reset everything when the popup is closed
+  const handleClose = () => {
+    setStep('reauthenticate');
+    setError(null);
+    setLoading(false);
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setOtpCode('');
+    onClose();
+  };
 
-// const { height: screenHeight } = Dimensions.get('window');
+  return (
+    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={handleClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-circle" size={26} color="#6b7280" />
+          </TouchableOpacity>
+          
+          {step === 'reauthenticate' && (
+            <>
+              <Text style={styles.title}>Change Password</Text>
+              <Text style={styles.label}>Old Password</Text>
+              <TextInput style={styles.input} secureTextEntry value={oldPassword} onChangeText={setOldPassword} />
+              <Text style={styles.label}>New Password</Text>
+              <TextInput style={styles.input} secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+              <Text style={styles.label}>Confirm New Password</Text>
+              <TextInput style={styles.input} secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+              <TouchableOpacity style={styles.submitButton} onPress={handleReauthentication} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Continue</Text>}
+              </TouchableOpacity>
+            </>
+          )}
 
-// const styles = StyleSheet.create({
-//   backdrop: {
-//     flex: 1,
-//     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     paddingHorizontal: 20,
-//     paddingVertical: 20,
-//   },
-//   keyboardAvoidingView: {
-//     flex: 1,
-//     width: '100%',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   popupContainer: {
-//     width: '100%',
-//     maxWidth: 400,
-//     backgroundColor: '#FFFFFF',
-//     borderRadius: 16,
-//     shadowColor: '#000',
-//     shadowOffset: {
-//       width: 0,
-//       height: 10,
-//     },
-//     shadowOpacity: 0.25,
-//     shadowRadius: 20,
-//     elevation: 10,
-//     maxHeight: screenHeight - 40,
-//     overflow: 'hidden',
-//   },
-//   scrollViewContent: {
-//     flexGrow: 1,
-//     padding: 20,
-//     paddingBottom: 40,
-//   },
-//   header: {
-//    flexDirection: 'row', 
-//    alignItems: 'center', 
-//    justifyContent: 'space-between', 
-//    marginBottom: 34 
-//   },
-//   modalTitle: {
-//     fontSize: 24,
-//     fontWeight: '700' as '700',
-//     color: '#1F2937',
-//     textAlign: 'center',
-//     flex: 1
-//   },
+          {step === 'verifyEmailOtp' && (
+            <>
+              <Text style={styles.title}>Check Your Email</Text>
+              <Text style={styles.subtitle}> We have sent a 6-digit code to your registered email address. Please enter it below.</Text>
+              <Text style={styles.label}>6-Digit Verification Code</Text>
+              <TextInput style={styles.input} keyboardType="number-pad" maxLength={6} value={otpCode} onChangeText={setOtpCode} />
+              <TouchableOpacity style={styles.submitButton} onPress={handleOtpVerification} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Verify & Change Password</Text>}
+              </TouchableOpacity>
+            </>
+          )}
 
-//   inputGroup: {
-//     marginBottom: 20,
-//   },
-//   inputLabel: {
-//     fontSize: 14,
-//     fontWeight: '800' as '800',
-//     color: '#374151',
-//     marginBottom: 8,
-//   },
-//    textInput: {
-//     borderWidth: 1,
-//     borderColor: '#D1D5DB',
-//     borderRadius: 8,
-//     paddingHorizontal: 12,
-//     paddingVertical: 12,
-//     fontSize: 16,
-//     color: '#1F2937',
-//     backgroundColor: '#FFFFFF',
-//     height: 48,
-//   },
-//   submitButton: {
-//     flex: 1,
-//     height: 38,
-//     backgroundColor: '#8B5CF6',
-//     borderRadius: 6,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     marginLeft: 200,
-//     width: '40%',
-//   },
-//   submitButtonText: {
-//     fontSize: 16,
-//     fontWeight: '600' as '600',
-//     color: '#ffffff',
-//   },
- 
-//   pickerContainer: {
-//     marginTop: 5,
-//     borderWidth: 1,
-//     borderColor: '#D1D5DB',
-//     borderRadius: 5,
-//     backgroundColor: '#f5d6faff',
-//     overflow: 'hidden',
-//   },
-//   picker: {
-//     height: 48,
-//     width: '100%',
-//   },
-  
-//   modalHeader: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     paddingHorizontal: 20,
-//     paddingVertical: 16,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#E5E7EB',
-//     backgroundColor: '#FFFFFF',
-//     borderTopLeftRadius: 16,
-//     borderTopRightRadius: 16,
-//   },
-//   saveButton: {
-//     backgroundColor: '#8B5CF6',
-//     paddingHorizontal: 16,
-//     paddingVertical: 8,
-//     borderRadius: 8,
-//     minWidth: 60,
-//     alignItems: 'center',
-//   },
-//   saveButtonDisabled: {
-//     opacity: 0.6,
-//   },
-//   saveButtonText: {
-//     color: '#FFFFFF',
-//     fontSize: 14,
-//     fontWeight: '600' as '600',
-//   },
-//   modalContent: {
-//     flex: 1,
-//     padding: 20,
-//     borderBottomLeftRadius: 16,
-//     borderBottomRightRadius: 16,
-//   },
-//   modalContentContainer: {
-//     padding: 20,
-//     paddingBottom: 40,
-//   },
-//   section: {
-//     marginBottom: 32,
-//   },
-//   sectionTitle: {
-//     fontSize: 16,
-//     fontWeight: '600' as '600',
-//     color: '#1F2937',
-//     marginBottom: 16,
-//   },
-//   inputContainer: {
-//     marginBottom: 20,
-//   },
-//   textInputError: {
-//     borderColor: '#EF4444',
-//   },
-//   textInputMultiline: {
-//     height: 80,
-//     textAlignVertical: 'top',
-//   },
-//   errorText: {
-//     fontSize: 12,
-//     color: '#EF4444',
-//     marginTop: 4,
-//   },
-//   bloodTypeContainer: {
-//     flexDirection: 'row',
-//   },
-//   bloodTypeOption: {
-//     paddingHorizontal: 16,
-//     paddingVertical: 8,
-//     borderRadius: 20,
-//     borderWidth: 1,
-//     borderColor: '#D1D5DB',
-//     marginRight: 8,
-//     backgroundColor: '#FFFFFF',
-//   },
-//   bloodTypeOptionSelected: {
-//     backgroundColor: '#8B5CF6',
-//     borderColor: '#8B5CF6',
-//   },
-//   bloodTypeText: {
-//     fontSize: 14,
-//     color: '#6B7280',
-//     fontWeight: '500' as '500',
-//   },
-//   bloodTypeTextSelected: {
-//     color: '#FFFFFF',
-//   },
-//   infoContainer: {
-//     flexDirection: 'row',
-//     alignItems: 'flex-start',
-//     backgroundColor: '#F3E8FF',
-//     padding: 16,
-//     borderRadius: 8,
-//     marginTop: 16,
-//   },
-//   infoText: {
-//     flex: 1,
-//     fontSize: 14,
-//     color: '#6B46C1',
-//     marginLeft: 8,
-//     lineHeight: 20,
-//   },
-// });
+          {error && <Text style={styles.errorText}>{error}</Text>}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
 
-// export default changepwScreen;
-
-
+// Styles for the component
+const styles = StyleSheet.create({
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+  modalContainer: { width: '90%', backgroundColor: '#fff', borderRadius: 15, padding: 25 },
+  closeButton: { position: 'absolute', top: 15, right: 15 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#1f2937', textAlign: 'center', marginBottom: 10 },
+  subtitle: { fontSize: 14, color: '#4b5563', textAlign: 'center', marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8, marginTop: 10 },
+  input: { height: 50, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, paddingHorizontal: 15, fontSize: 16 },
+  submitButton: { backgroundColor: '#8B5CF6', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginTop: 25 },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  errorText: { color: '#ef4444', fontSize: 14, textAlign: 'center', marginTop: 15 },
+});

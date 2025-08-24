@@ -34,10 +34,18 @@ export default function DoctorSearch() {
     };
 
     const handleItemPress = (item: Doctor) => {
-        // Navigate to detailed view or handle item selection
-        console.log('Selected Doctor:', item);
+        // Pass doctor info via params to doctor_details page
+        router.push({
+            pathname: '/patientProfile/more/doctorSearch/doctor_details',
+            params: {
+                docid: item.docid,
+                name: item.Name,
+                specialist: item.Specialist,
+                profilePicture: item.profilePicture
+            }
+        });
     };
-
+    
      // Sample data - replace with actual data from your backend
   const doctorData: Doctor[] = [
     {
@@ -135,7 +143,7 @@ export default function DoctorSearch() {
 
             {/* Content */}
             <ScrollView style={styles.content} showsHorizontalScrollIndicator={false}>
-                {/* Filter Options */}
+    
                 {/* Filter Options */}
                 <ScrollView
                     horizontal

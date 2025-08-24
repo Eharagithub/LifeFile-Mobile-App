@@ -15,42 +15,42 @@ const plaster: ImageSourcePropType = require('../../assets/images/plaster.png');
 
 
 const Landingpage: React.FC = () => {
-  const router = useRouter();    
-    useEffect(() => {
-        // Auto-navigate to welcome screen after 3 seconds
-        const timer = setTimeout(() => {
-          router.push('/common/welcomeScreen');
-        }, 3000);
-        
-        return () => clearTimeout(timer);
-      }, [router]);
+  const router = useRouter();
+  useEffect(() => {
+    // Auto-navigate to welcome screen after 3 seconds
+    const timer = setTimeout(() => {
+      router.push('/common/welcomeScreen');
+    }, 3000);
 
-       const handleSkip = () => {
-        // Navigate immediately if user taps anywhere
-        router.push('/common/welcomeScreen');
-      };  return (
-        <TouchableOpacity 
-      style={styles.container} 
+    return () => clearTimeout(timer);
+  }, [router]);
+
+  const handleSkip = () => {
+    // Navigate immediately if user taps anywhere
+    router.push('/common/welcomeScreen');
+  }; return (
+    <TouchableOpacity
+      style={styles.container}
       activeOpacity={1}
       onPress={handleSkip}>
-     
+
       <Image source={pillsImg} style={styles.pills} resizeMode="contain" />
-      
+
       <Image source={stethoscopeImg} style={styles.stethoscope} resizeMode="contain" />
-      
+
       <Image source={bandageImg} style={styles.bandage} resizeMode="contain" />
-      
+
       {/* <Image source={injection} style={styles.injection} resizeMode="contain" /> */}
 
-      <Image source={plaster} style={styles.plaster} resizeMode="contain" /> 
+      <Image source={plaster} style={styles.plaster} resizeMode="contain" />
 
-       <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/images/logo.png')} 
-          style={styles.logo} 
-          resizeMode="contain" 
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
-     
+
       </View>
 
     </TouchableOpacity>
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     height: 470,
     marginBottom: 10,
   },
-  
+
   pills: {
     position: 'absolute',
     top: 30,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
     transform: [{ rotate: '5deg' }], // Add this line to rotate the image -45 degrees
   },
- 
+
 });
 
 export default Landingpage;
