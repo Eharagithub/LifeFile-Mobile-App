@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
     View,
     Text,
@@ -14,106 +15,71 @@ import { useRouter } from 'expo-router';
 import styles from './doctorSearch.styles';
 import BottomNavigation from '../../../common/BottomNavigation';
 
+// Removed duplicate Doctor interface and DoctorSearch function declaration
+
 interface Doctor {
-  docid: string;
-  Name: string;
-  Specialist: string;
-  profilePicture: string;
+    _id: string;
+    name: string;
+    primarySpecialization: string;
+    rating: number;
+    profilePicture?: string;
+    primaryHospital: string;
 }
 
-export default function DoctorSearch() {
+const DoctorSearch: React.FC = () => {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSpecialty, setSelectedSpecialty] = useState('All');
     const [loading, setLoading] = useState(false);
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
 
-   
+    // Replace <app-id> and API_KEY with your actual values
+    const DATA_API_URL = 'https://express-js-on-vercel-ten-coral.vercel.app/doctors';
+    const API_KEY = '75a2c05a-092d-4fb4-b6cc-b2e204f81e6e';
+
+    useEffect(() => {
+        setLoading(true);
+        axios.get(DATA_API_URL)
+            .then(result => {
+                if (result.data) {
+                    setDoctors(result.data); // or result.data.doctors if your API returns { doctors: [...] }
+                } else {
+                    setDoctors([]);
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error('Error fetching doctors:', err);
+                setLoading(false);
+            });
+    }, []);
 
     const handleBack = () => {
         router.back();
     };
 
     const handleItemPress = (item: Doctor) => {
-        // Pass doctor info via params to doctor_details page
         router.push({
             pathname: '/patientProfile/more/doctorSearch/doctor_details',
             params: {
-                docid: item.docid,
-                name: item.Name,
-                specialist: item.Specialist,
-                profilePicture: item.profilePicture
+                docid: item._id,
+                name: item.name,
+                specialist: item.primarySpecialization,
+                profilePicture: item.profilePicture || ''
             }
         });
     };
-    
-     // Sample data - replace with actual data from your backend
-  const doctorData: Doctor[] = [
-    {
-      docid: '1',
-      profilePicture:'',
-      Name: 'Dr. Sarah Johnson',
-      Specialist: 'Cardiologist',
-    },
-    {
-      docid: '2',
-      profilePicture:'',
-      Name: 'Dr. Michael Williams',
-      Specialist: 'Neurologist',
-    },
-    {
-      docid: '3',
-      profilePicture:'',
-      Name: 'Dr. Emily Rodriguez',
-      Specialist: 'Dermatologist',
-    },
-    {
-      docid: '4',
-      profilePicture:'',
-      Name: 'Dr. David Chen',
-      Specialist: 'Pediatrician',
-    },
-    {
-      docid: '5',
-      profilePicture:'',
-      Name: 'Dr. Lisa Martinez',
-      Specialist: 'Cardiologist',
-    },
-    {
-      docid: '6',
-      profilePicture:'',
-      Name: 'Dr. Robert Johnson',
-      Specialist: 'Neurologist',
-    },
-    {
-      docid: '7',
-      profilePicture:'',
-      Name: 'Dr. Jennifer Smith',
-      Specialist: 'Dermatologist',
-    },
-    {
-      docid: '8',
-      profilePicture:'',
-      Name: 'Dr. James Wilson',
-      Specialist: 'Pediatrician',
-    },
-  ];
 
-    // Function to handle when we need to show loading status
-    const toggleLoading = (status: boolean) => {
-        setLoading(status);
-    };
-
-    const filteredData = doctorData.filter(doctor => {
-        // Apply specialty filter
-        const matchesSpecialty = selectedSpecialty === 'All' || doctor.Specialist === selectedSpecialty;
-        
-        // Apply search query filter (if any)
-        const matchesSearch = searchQuery === '' || 
-            doctor.Name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            doctor.Specialist.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        // Return doctors that match both filters
-        return matchesSpecialty && matchesSearch;
+    const filteredData = doctors.filter(doctor => {
+        // Case-insensitive and trimmed category match
+        const selected = selectedSpecialty.trim().toLowerCase();
+        const doctorSpec = (doctor.primarySpecialization || '').trim().toLowerCase();
+        const matchesCategory = selected === 'all' || doctorSpec === selected;
+        // Case-insensitive search
+        const matchesSearch = searchQuery.trim() === '' ||
+            doctor.name.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+            doctorSpec.includes(searchQuery.trim().toLowerCase());
+        return matchesCategory && matchesSearch;
     });
 
     return (
@@ -143,98 +109,72 @@ export default function DoctorSearch() {
 
             {/* Content */}
             <ScrollView style={styles.content} showsHorizontalScrollIndicator={false}>
-    
                 {/* Filter Options */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterContainer}
                 >
-                    <TouchableOpacity 
-                        style={[
-                            styles.filterButton, 
-                            selectedSpecialty === 'All' && styles.filterButtonActive
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.filterButton, selectedSpecialty === 'All' && styles.filterButtonActive]}
                         onPress={() => setSelectedSpecialty('All')}
                     >
-                        <Text style={[
-                            styles.filterText, 
-                            selectedSpecialty === 'All' && styles.filterTextActive
-                        ]}>All</Text>
+                        <Text style={[styles.filterText, selectedSpecialty === 'All' && styles.filterTextActive]}>All</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[
-                            styles.filterButton, 
-                            selectedSpecialty === 'Cardiologist' && styles.filterButtonActive
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.filterButton, selectedSpecialty === 'Cardiologist' && styles.filterButtonActive]}
                         onPress={() => setSelectedSpecialty('Cardiologist')}
                     >
-                        <Text style={[
-                            styles.filterText, 
-                            selectedSpecialty === 'Cardiologist' && styles.filterTextActive
-                        ]}>Cardiologist</Text>
+                        <Text style={[styles.filterText, selectedSpecialty === 'Cardiologist' && styles.filterTextActive]}>Cardiologist</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[
-                            styles.filterButton, 
-                            selectedSpecialty === 'Dermatologist' && styles.filterButtonActive
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.filterButton, selectedSpecialty === 'Dermatologist' && styles.filterButtonActive]}
                         onPress={() => setSelectedSpecialty('Dermatologist')}
                     >
-                        <Text style={[
-                            styles.filterText, 
-                            selectedSpecialty === 'Dermatologist' && styles.filterTextActive
-                        ]}>Dermatologist</Text>
+                        <Text style={[styles.filterText, selectedSpecialty === 'Dermatologist' && styles.filterTextActive]}>Dermatologist</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[
-                            styles.filterButton, 
-                            selectedSpecialty === 'Pediatrician' && styles.filterButtonActive
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.filterButton, selectedSpecialty === 'Pediatrician' && styles.filterButtonActive]}
                         onPress={() => setSelectedSpecialty('Pediatrician')}
                     >
-                        <Text style={[
-                            styles.filterText, 
-                            selectedSpecialty === 'Pediatrician' && styles.filterTextActive
-                        ]}>Pediatrician</Text>
+                        <Text style={[styles.filterText, selectedSpecialty === 'Pediatrician' && styles.filterTextActive]}>Pediatrician</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[
-                            styles.filterButton, 
-                            selectedSpecialty === 'Neurologist' && styles.filterButtonActive
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.filterButton, selectedSpecialty === 'Neurologist' && styles.filterButtonActive]}
                         onPress={() => setSelectedSpecialty('Neurologist')}
                     >
-                        <Text style={[
-                            styles.filterText, 
-                            selectedSpecialty === 'Neurologist' && styles.filterTextActive
-                        ]}>Neurologist</Text>
+                        <Text style={[styles.filterText, selectedSpecialty === 'Neurologist' && styles.filterTextActive]}>Neurologist</Text>
                     </TouchableOpacity>
                 </ScrollView>
 
                 {/* Doctor Cards */}
-                {filteredData.length > 0 ? (
+                {loading ? (
+                    <View style={styles.noResultsContainer}>
+                        <Feather name="search" size={50} color="#ddd" />
+                        <Text style={styles.noResultsText}>Loading...</Text>
+                    </View>
+                ) : filteredData.length > 0 ? (
                     filteredData.map(doctor => (
                         <TouchableOpacity
-                            key={doctor.docid}
+                            key={doctor._id}
                             style={styles.doctorCard}
                             onPress={() => handleItemPress(doctor)}
                             activeOpacity={0.7}
                         >
                             <Image
-                                source={require('../../../../assets/images/profile.jpg')}
+                                source={doctor.profilePicture ? { uri: doctor.profilePicture } : { uri: 'https://via.placeholder.com/150' }}
                                 style={styles.doctorImage}
                             />
                             <View style={styles.doctorInfo}>
-                                <Text style={styles.doctorName}>{doctor.Name}</Text>
-                                <Text style={styles.doctorSpecialty}>{doctor.Specialist}</Text>
+                                <Text style={styles.doctorName}>{doctor.name}</Text>
+                                <Text style={styles.doctorSpecialty}>{doctor.primarySpecialization}</Text>
                                 <View style={styles.ratingContainer}>
                                     <Feather name="star" size={14} color="#FFD700" />
-                                    <Text style={styles.ratingText}>4.8 (95 reviews)</Text>
+                                    <Text style={styles.ratingText}>{doctor.rating}</Text>
                                 </View>
                                 <View style={styles.locationContainer}>
                                     <Feather name="map-pin" size={12} color="#999" />
-                                    <Text style={styles.locationText}>Medical Center, 2.5 miles away</Text>
+                                    <Text style={styles.locationText}>{doctor.primaryHospital}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -250,10 +190,11 @@ export default function DoctorSearch() {
 
             {/* Bottom Navigation */}
             <BottomNavigation
-                activeTab="none" // Using 'none' to indicate no active tab
-                onTabPress={() => { }} // Empty function as we're handling navigation in the component
+                activeTab="none"
+                onTabPress={() => { }}
             />
-
         </SafeAreaView>
-    )
-}
+    );
+};
+
+export default DoctorSearch;
