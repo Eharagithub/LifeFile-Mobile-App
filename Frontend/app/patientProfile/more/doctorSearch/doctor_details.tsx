@@ -27,6 +27,7 @@ interface DoctorProfileProps {
 }
 interface Doctor {
     _id: string;
+    doctorId: string;
     name: string;
     primarySpecialization: string;
     rating: number;
@@ -45,7 +46,6 @@ interface Doctor {
 const DoctorProfile: React.FC = () => {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const doctorId = params.id as string;
     const [doctor, setDoctor] = useState<Doctor | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -53,26 +53,26 @@ const DoctorProfile: React.FC = () => {
     const [selectedLocation, setSelectedLocation] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!doctorId) {
+        
+        if (!params.id) {
             console.log('No doctorId provided in params:', params);
             return;
-        }
+        } 
+
         const fetchDoctor = async () => {
             try {
-                console.log('Fetching doctor with ID:', doctorId);
-                const response = await axios.get(`https://express-js-on-vercel-ten-coral.vercel.app/doctors/${doctorId}`);
+                const response = await axios.get(`https://express-js-on-vercel-ten-coral.vercel.app/doctors/${params.id}`);
                 setDoctor(response.data);
                 setError(null);
-                console.log('Fetched doctor data:', response.data);
             } catch (err) {
-                console.log('Error fetching doctor:', err);
                 setError('Failed to fetch doctor details.');
             } finally {
                 setLoading(false);
             }
         };
+
         fetchDoctor();
-    }, [doctorId]);
+    }, [params, params.id]);
 
     const handleBack = () => {
         router.back();

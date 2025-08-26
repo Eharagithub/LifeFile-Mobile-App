@@ -15,10 +15,9 @@ import { useRouter } from 'expo-router';
 import styles from './doctorSearch.styles';
 import BottomNavigation from '../../../common/BottomNavigation';
 
-// Removed duplicate Doctor interface and DoctorSearch function declaration
-
 interface Doctor {
     _id: string;
+    doctorCode: string;  // Added doctorCode field
     name: string;
     primarySpecialization: string;
     rating: number;
@@ -33,39 +32,49 @@ const DoctorSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
 
-    // Replace <app-id> and API_KEY with your actual values
     const DATA_API_URL = 'https://express-js-on-vercel-ten-coral.vercel.app/doctors';
-    const API_KEY = '75a2c05a-092d-4fb4-b6cc-b2e204f81e6e';
 
     useEffect(() => {
-        setLoading(true);
-        axios.get(DATA_API_URL)
-            .then(result => {
-                if (result.data) {
-                    setDoctors(result.data); // or result.data.doctors if your API returns { doctors: [...] }
+        const fetchDoctors = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(DATA_API_URL);
+                console.log('Fetched doctors:', response.data);
+                
+                if (response.data) {
+                    setDoctors(response.data);
                 } else {
                     setDoctors([]);
                 }
+            } catch (error) {
+                console.error('Error fetching doctors:', error);
+                setDoctors([]);
+            } finally {
                 setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching doctors:', err);
-                setLoading(false);
-            });
+            }
+        };
+
+        fetchDoctors();
     }, []);
 
     const handleBack = () => {
         router.back();
     };
 
-    const handleItemPress = (item: Doctor) => {
+    const handleItemPress = (doctor: Doctor) => {
+        console.log('Navigating to doctor details with doctorCode:', doctor.doctorCode);
+        console.log('Doctor object:', doctor);
+        
+        // Using doctorCode instead of _id since that's the primary key in your DB
         router.push({
             pathname: '/patientProfile/more/doctorSearch/doctor_details',
             params: {
-                docid: item._id,
-                name: item.name,
-                specialist: item.primarySpecialization,
-                profilePicture: item.profilePicture || ''
+                id: doctor._id,  
+                name: doctor.name,
+                specialty: doctor.primarySpecialization,
+                profilePicture: doctor.profilePicture || '',
+                hospital: doctor.primaryHospital || '',
+                rating: doctor.rating?.toString() || '0'
             }
         });
     };
@@ -75,10 +84,12 @@ const DoctorSearch: React.FC = () => {
         const selected = selectedSpecialty.trim().toLowerCase();
         const doctorSpec = (doctor.primarySpecialization || '').trim().toLowerCase();
         const matchesCategory = selected === 'all' || doctorSpec === selected;
+        
         // Case-insensitive search
         const matchesSearch = searchQuery.trim() === '' ||
             doctor.name.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
             doctorSpec.includes(searchQuery.trim().toLowerCase());
+            
         return matchesCategory && matchesSearch;
     });
 
@@ -156,7 +167,7 @@ const DoctorSearch: React.FC = () => {
                 ) : filteredData.length > 0 ? (
                     filteredData.map(doctor => (
                         <TouchableOpacity
-                            key={doctor._id}
+                            key={doctor.doctorCode || doctor._id}  // Use doctorCode as primary key, fallback to _id
                             style={styles.doctorCard}
                             onPress={() => handleItemPress(doctor)}
                             activeOpacity={0.7}
