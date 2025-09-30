@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'CareBot' | 'notification' | 'more' | 'none';
+  activeTab: 'home' | 'MyProfile' | 'notification' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -18,7 +18,7 @@ export default function BottomNavigation({
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
   // Only highlight tab if on these pages
-  const highlightTabs = ['home', 'CareBot', 'notification', 'more'];
+  const highlightTabs = ['home', 'MyProfile', 'notification', 'more'];
   const shouldHighlight = highlightTabs.includes(activeTab);
 
   const handleTabPress = (tabName: string) => {
@@ -27,8 +27,8 @@ export default function BottomNavigation({
       case 'home':
         router.push('../../../patientProfile/patientHome');
         break;
-      case 'CareBot':
-        router.push('../../../patientProfile/CareBot');
+      case 'MyProfile':
+        router.push('../../../patientProfile/more/patientProfilee/MyProfile');
         break;
       case 'notification':
         router.push('../../../patientProfile/notification');
@@ -82,17 +82,17 @@ export default function BottomNavigation({
 
         <TouchableOpacity
           style={styles && styles.tabButton}
-          onPress={() => handleTabPress('CareBot')}
+          onPress={() => handleTabPress('MyProfile')}
         >
           <Feather
             name="message-circle"
             size={22}
-            color={shouldHighlight && activeTab === 'CareBot' ? '#7d4c9e' : '#666'}
+            color={shouldHighlight && activeTab === 'MyProfile' ? '#7d4c9e' : '#666'}
           />
           <Text style={styles && [
             styles.tabLabel,
-            shouldHighlight && activeTab === 'CareBot' && styles.activeTabLabel
-          ]}>CareBot</Text>
+            shouldHighlight && activeTab === 'MyProfile' && styles.activeTabLabel
+          ]}>My Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

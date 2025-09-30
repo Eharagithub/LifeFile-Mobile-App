@@ -394,7 +394,7 @@ export default function PatientHome() {
           <View style={styles.actionIconContainer}>
             <FontAwesome name="stethoscope" size={22} color="#fff" />
           </View>
-          <Text style={styles.actionText}>View History</Text>
+          <Text style={styles.actionText}>Health Timeline</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -414,7 +414,7 @@ export default function PatientHome() {
           <View style={styles.actionIconContainer}>
             <FontAwesome name="file-text-o" size={22} color="#fff" />
           </View>
-          <Text style={styles.actionText}>Lab Reports</Text>
+          <Text style={styles.actionText}>Lab Results</Text>
         </TouchableOpacity>
       </View>
 

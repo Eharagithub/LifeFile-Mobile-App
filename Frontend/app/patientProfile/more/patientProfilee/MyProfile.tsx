@@ -15,10 +15,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import styles from './MyProfile.styles';
 
-// Import the new EditProfileModal component
-import EditProfileModal from './editProfile/personalinfooredit';
-import ChangePw from './editProfile/changepw';
-import ContactInfor from './editProfile/contactInfor';
+// Import the profile edit components
+import EditProfileScreen from './editProfile/personalinfooredit';
+import { ChangePw } from './editProfile/changepw';
+import ContactInforScreen from './editProfile/contactInfor';
 
 // Firebase imports from firebaseConfig.ts
 import { db, storage, auth } from '../../../../config/firebaseConfig';
@@ -110,12 +110,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
   const currentUser = auth.currentUser;
   const userId = currentUser ? currentUser.uid : null;
 
-  useEffect(() => {
-    // Fetch user data from Firestore when component mounts
-    fetchUserData();
-  }, [userId]);
-
-  const fetchUserData = async () => {
+  // Function to fetch user data from Firestore
+  const fetchUserData = React.useCallback(async () => {
     if (!userId) {
       console.error("No user is signed in");
       setLoading(false);
@@ -124,10 +120,10 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
     try {
       setLoading(true);
-      const userDocRef = db.collection("users").doc(userId);
-      const userDoc = await userDocRef.get();
+      const userDocRef = doc(db, "users", userId);
+      const userDoc = await getDoc(userDocRef);
 
-      if (userDoc.exists) {
+      if (userDoc.exists()) {
         const data = userDoc.data() as UserData;
         setUserData(data);
       } else {
@@ -138,16 +134,21 @@ const FirestoreMyProfileScreen: React.FC = () => {
           profilePicture: currentUser?.photoURL || "",
         };
 
-        await userDocRef.set(defaultUserData);
+        await setDoc(userDocRef, defaultUserData);
         setUserData(defaultUserData);
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
+    } catch (error: any) {
+      console.error("Error fetching user data:", error?.message || error);
       Alert.alert("Error", "Failed to load user data. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, currentUser, setLoading, setUserData]);
+
+  useEffect(() => {
+    // Fetch user data from Firestore when component mounts
+    fetchUserData();
+  }, [userId, fetchUserData]);
 
   const updateUserProfile = async (updatedData: Partial<UserData>) => {
     if (!userId) {
@@ -156,8 +157,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
     }
 
     try {
-      const userDocRef = db.collection("users").doc(userId);
-      await userDocRef.update(updatedData);
+      const userDocRef = doc(db, "users", userId);
+      await updateDoc(userDocRef, updatedData);
 
       // Update local state
       setUserData(prev => prev ? { ...prev, ...updatedData } : null);
@@ -271,11 +272,13 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
           // Update Firestore with new profile image URL
           await updateUserProfile({ profilePicture: downloadURL });
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Failed to upload profile picture:', error?.message || error);
           Alert.alert('Error', 'Failed to upload profile picture.');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to take photo:', error?.message || error);
       Alert.alert('Error', 'Failed to take photo');
     }
   };
@@ -307,11 +310,13 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
           // Update Firestore with new profile image URL
           await updateUserProfile({ profilePicture: downloadURL });
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Failed to upload profile picture:', error?.message || error);
           Alert.alert('Error', 'Failed to upload profile picture.');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to select image:', error?.message || error);
       Alert.alert('Error', 'Failed to select image');
     }
   };
@@ -321,7 +326,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
       try {
         await deleteOldProfileImage(userData.profilePicture);
         await updateUserProfile({ profilePicture: '' });
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Failed to remove profile picture:', error?.message || error);
         Alert.alert('Error', 'Failed to remove profile picture.');
       }
     }
@@ -516,30 +522,21 @@ const FirestoreMyProfileScreen: React.FC = () => {
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <EditProfileModal
+      <EditProfileScreen
         visible={editModalVisible}
         userData={userData}
         onClose={handleCloseEditModal}
-
       />
-      {/* <ChangePw
-        visible={changePwVisible}
-        userData={userData}
-        onClose={handleClosechangePw}       
-      /> */}
 
       <ChangePw
         visible={changePwVisible}
         onClose={handleClosechangePw}
-        phoneNumber={userData?.phoneNumber} // Add this line
       />
 
-
-      <ContactInfor
+      <ContactInforScreen
         visible={contactInfor}
         userData={userData}
         onClose={handleCloseContactInformation}
-
       />
     </SafeAreaView>
   );
