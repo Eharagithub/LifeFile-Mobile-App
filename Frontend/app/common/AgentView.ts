@@ -145,7 +145,7 @@ export const chatStyles = StyleSheet.create({
     right: 20,
     width: 56,
     height: 56,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#6B4EAE',
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
@@ -155,5 +155,6 @@ export const chatStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     zIndex: 1000,
+    marginRight: '3%',
   },
 });

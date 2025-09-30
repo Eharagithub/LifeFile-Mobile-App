@@ -139,15 +139,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     opacity: 1,
   },
+  
   buttonContainer: {
-    padding: 20,
+    padding: 10,
     backgroundColor: COLORS.white,
+    marginTop: 20,
   },
   loginButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 16,
+    width: '70%',
     borderRadius: 30,
     alignItems: 'center',
+    marginLeft: '5%',
     marginBottom: 12,
     shadowColor: COLORS.primary,
     shadowOffset: {
@@ -163,20 +167,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  createAccountButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  createAccountButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  
   termsText: {
     textAlign: 'center',
     color: COLORS.gray,

@@ -286,7 +286,8 @@ export default function WelcomeScreen() {
               ))}
             </View>
           </View>
-
+        
+       
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.loginButton}
@@ -295,9 +296,9 @@ export default function WelcomeScreen() {
               <Text style={styles.loginButtonText}>Let’s Get You Connected</Text>
             </TouchableOpacity>
 
-          </View>
-        </Animated.View>
-      )}
+         
+        
+    
 
       {/* Chatbot Component */}
       {chatOpen && (
@@ -379,6 +380,10 @@ export default function WelcomeScreen() {
         >
           <Feather name="message-circle" size={24} color="#f9f8fcff" />
         </TouchableOpacity>
+      )}
+      </View>
+      </Animated.View>
+
       )}
     </SafeAreaView>
   );
