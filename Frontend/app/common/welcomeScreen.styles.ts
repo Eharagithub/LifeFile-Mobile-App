@@ -63,8 +63,8 @@ const styles = StyleSheet.create({
   },
 
   heartIcon: {
-    width: 460,
-    height: 460,
+    width: 490,
+    height: 490,
     marginBottom: 10,
     tintColor: COLORS.primary,
   },
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   slideTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: COLORS.text,
     marginTop: 20,

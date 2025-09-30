@@ -2,7 +2,14 @@ import { useRouter } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring, 
+  withTiming,
+  withRepeat,
+  withSequence
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { chatStyles } from './AgentView';
@@ -28,20 +35,20 @@ const walkthroughData: WalkthroughItem[] = [
   {
     id: '1',
     image: require('../../assets/images/walk-1.jpg'),
-    title: 'Connect With Caregivers',
-    description: 'Share your health information securely with your doctors and loved ones',
+    title: 'Connect With Your Care Team',
+    description: 'Easily share health records and stay connected with doctors, caregivers, and family members.',
   },
   {
     id: '2',
     image: require('../../assets/images/walk-2.jpg'),
-    title: 'Track Your Health',
-    description: 'Monitor and manage your health records in one secure place',
+    title: 'Track & Manage Your Health',
+    description: 'Keep all your medical history, prescriptions, and reports securely in one place.',
   },
   {
     id: '3',
     image: require('../../assets/images/walk-3.jpg'),
-    title: 'Secure & Private',
-    description: 'Your health data is encrypted and protected with the highest security standards',
+    title: 'Your Personal AI Health Assistant',
+    description: 'Get smart reminders, insights, and recommendations to support your well-being.'
   },
 ];
 
@@ -68,12 +75,15 @@ export default function WelcomeScreen() {
   const contentOpacity = useSharedValue(0);
   const scrollX = useSharedValue(0);
   const chatScale = useSharedValue(0);
+  const chatButtonScale = useSharedValue(1);
+  const rippleScale = useSharedValue(1);
+  const rippleOpacity = useSharedValue(0.2);
 
   const scrollViewRef = React.useRef<ScrollView>(null);
   const chatScrollRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    const animationTimeout = Platform.OS === 'web' ? 3000 : 5000;
+    const animationTimeout = Platform.OS === 'web' ? 3000 : 3000;
 
     setTimeout(() => {
       logoScale.value = withSpring(0.8);
@@ -110,6 +120,55 @@ export default function WelcomeScreen() {
     transform: [{ scale: chatScale.value }],
     opacity: chatScale.value,
   }));
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: chatButtonScale.value }],
+  }));
+
+  const rippleAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rippleScale.value }],
+    opacity: rippleOpacity.value,
+  }));
+
+  // Animation for the chat button
+  useEffect(() => {
+    const pulseAnimation = () => {
+      rippleScale.value = withRepeat(
+        withSequence(
+          withTiming(1.2, { duration: 1000 }),
+          withTiming(1, { duration: 1000 })
+        ),
+        -1,
+        true
+      );
+
+      rippleOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.3, { duration: 1000 }),
+          withTiming(0.1, { duration: 1000 })
+        ),
+        -1,
+        true
+      );
+
+      chatButtonScale.value = withRepeat(
+        withSequence(
+          withSpring(1.1),
+          withSpring(1)
+        ),
+        -1,
+        true
+      );
+    };
+
+    if (!chatOpen) {
+      pulseAnimation();
+    } else {
+      chatButtonScale.value = 1;
+      rippleScale.value = 1;
+      rippleOpacity.value = 0.2;
+    }
+  }, [chatOpen, chatButtonScale, rippleScale, rippleOpacity]);
 
   const getBotResponse = (userMessage: string): string => {
     const msg = userMessage.toLowerCase();
@@ -365,8 +424,9 @@ export default function WelcomeScreen() {
               onPress={() => setChatMinimized(false)}
               style={chatStyles.minimizedChat}
             >
-              <Feather name="activity" size={16} color="#8B5CF6F" />
-              <Text style={chatStyles.minimizedText}>Chat</Text>
+              <Feather name="message-circle" size={24} color="#f9f8fcff" />
+              {/* <Feather name="activity" size={16} color="#8B5CF6F" /> */}
+              {/* <Text style={chatStyles.minimizedText}>CareBot</Text> */}
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -378,7 +438,10 @@ export default function WelcomeScreen() {
           onPress={toggleChat}
           style={chatStyles.chatToggle}
         >
-          <Feather name="message-circle" size={24} color="#f9f8fcff" />
+          <Animated.View style={[chatStyles.chatToggleRipple, rippleAnimatedStyle]} />
+          <Animated.View style={[chatStyles.chatToggleInner, buttonAnimatedStyle]}>
+            <Feather name="message-circle" size={24} color="#f9f8fcff" />
+          </Animated.View>
         </TouchableOpacity>
       )}
       </View>
