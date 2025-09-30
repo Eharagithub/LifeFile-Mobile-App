@@ -3,7 +3,7 @@ import { Dimensions, StyleSheet } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 // Chatbot Styles
-const chatStyles = StyleSheet.create({
+export const chatStyles = StyleSheet.create({
   chatContainer: {
     position: 'absolute',
     bottom: 20,
@@ -69,7 +69,7 @@ const chatStyles = StyleSheet.create({
     borderRadius: 16,
   },
   userMessage: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#a57ffeff',
     borderBottomRightRadius: 4,
   },
   botMessage: {
@@ -81,7 +81,7 @@ const chatStyles = StyleSheet.create({
     lineHeight: 18,
   },
   userMessageText: {
-    color: '#FFFFFF',
+    color: '#fdfafaff',
   },
   botMessageText: {
     color: '#374151',

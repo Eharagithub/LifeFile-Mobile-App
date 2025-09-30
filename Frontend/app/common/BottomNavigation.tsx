@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'statistics' | 'notification' | 'more' | 'none';
+  activeTab: 'home' | 'CareBot' | 'notification' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -18,7 +18,7 @@ export default function BottomNavigation({
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
   // Only highlight tab if on these pages
-  const highlightTabs = ['home', 'statistics', 'notification', 'more'];
+  const highlightTabs = ['home', 'CareBot', 'notification', 'more'];
   const shouldHighlight = highlightTabs.includes(activeTab);
 
   const handleTabPress = (tabName: string) => {
@@ -27,8 +27,8 @@ export default function BottomNavigation({
       case 'home':
         router.push('../../../patientProfile/patientHome');
         break;
-      case 'statistics':
-        router.push('../../../patientProfile/statistics');
+      case 'CareBot':
+        router.push('../../../patientProfile/CareBot');
         break;
       case 'notification':
         router.push('../../../patientProfile/notification');
@@ -67,21 +67,6 @@ export default function BottomNavigation({
 
         <TouchableOpacity
           style={styles && styles.tabButton}
-          onPress={() => handleTabPress('statistics')}
-        >
-          <Feather
-            name="bar-chart-2"
-            size={22}
-            color={shouldHighlight && activeTab === 'statistics' ? '#7d4c9e' : '#666'}
-          />
-          <Text style={styles && [
-            styles.tabLabel,
-            shouldHighlight && activeTab === 'statistics' && styles.activeTabLabel
-          ]}>Statistics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles && styles.tabButton}
           onPress={() => handleTabPress('notification')}
         >
           <Feather
@@ -93,6 +78,21 @@ export default function BottomNavigation({
             styles.tabLabel,
             shouldHighlight && activeTab === 'notification' && styles.activeTabLabel
           ]}>Notification</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles && styles.tabButton}
+          onPress={() => handleTabPress('CareBot')}
+        >
+          <Feather
+            name="message-circle"
+            size={22}
+            color={shouldHighlight && activeTab === 'CareBot' ? '#7d4c9e' : '#666'}
+          />
+          <Text style={styles && [
+            styles.tabLabel,
+            shouldHighlight && activeTab === 'CareBot' && styles.activeTabLabel
+          ]}>CareBot</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

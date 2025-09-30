@@ -5,7 +5,7 @@ import { Dimensions, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import chatStyles from './AgentView';
+import { chatStyles } from './AgentView';
 import styles from './welcomeScreen.styles';
 
 const { width, height } = Dimensions.get('window');
@@ -181,9 +181,7 @@ export default function WelcomeScreen() {
     }
   };
 
-  const handleCreateAccount = () => {
-    router.push('/(auth)/signup' as any);
-  };
+  
 
   //console.log('Firebase Apps:', getApps());
 
@@ -294,7 +292,7 @@ export default function WelcomeScreen() {
               style={styles.loginButton}
               onPress={handleLogin}
             >
-              <Text style={styles.loginButtonText}>Login to Your Account</Text>
+              <Text style={styles.loginButtonText}>Let’s Get You Connected</Text>
             </TouchableOpacity>
 
           </View>
@@ -312,7 +310,7 @@ export default function WelcomeScreen() {
               {/* Chat Header */}
               <View style={chatStyles.chatHeader}>
                 <View style={chatStyles.headerLeft}>
-                  <Feather name="activity" size={20} color="#8B5CF6" />
+                  <Feather name="activity" size={20} color="#dbc2f5ff" />
                   <Text style={chatStyles.headerTitle}>Health Assistant</Text>
                 </View>
                 <View style={chatStyles.headerRight}>
@@ -320,13 +318,13 @@ export default function WelcomeScreen() {
                     onPress={minimizeChat}
                     style={chatStyles.headerButton}
                   >
-                    <Feather name="minimize-2" size={16} color="#8B5CF6" />
+                    <Feather name="minimize-2" size={16} color="#dbc2f5ff" />
                   </TouchableOpacity>
                   <TouchableOpacity 
                     onPress={toggleChat}
                     style={chatStyles.headerButton}
                   >
-                    <Feather name="x" size={16} color="#8B5CF6" />
+                    <Feather name="x" size={16} color="#dbc2f5ff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -357,7 +355,7 @@ export default function WelcomeScreen() {
                   onPress={sendMessage}
                   style={chatStyles.sendButton}
                 >
-                  <Feather name="send" size={16} color="#8B5CF6" />
+                  <Feather name="send" size={16} color="#f7f7f7ff" />
                 </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>
@@ -379,7 +377,7 @@ export default function WelcomeScreen() {
           onPress={toggleChat}
           style={chatStyles.chatToggle}
         >
-          <Feather name="message-circle" size={24} color="#8B5CF6" />
+          <Feather name="message-circle" size={24} color="#f9f8fcff" />
         </TouchableOpacity>
       )}
     </SafeAreaView>

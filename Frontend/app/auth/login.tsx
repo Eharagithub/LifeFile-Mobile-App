@@ -55,19 +55,8 @@ const LoginScreen = () => {
       const result = await loginUser(email, password);
       
       if (result.success) {
-        Alert.alert(
-          'Login Success', 
-          'Successfully logged in.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to patient home page
+        
                 router.push('/patientProfile/patientHome');
-              }
-            }
-          ]
-        );
       } else {
         // We have the error from result.error but don't need to use it specifically
         Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
