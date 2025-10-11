@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { chatService } from '../../services/chatService';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -170,9 +171,26 @@ export default function WelcomeScreen() {
     }
   }, [chatOpen, chatButtonScale, rippleScale, rippleOpacity]);
 
-  const getBotResponse = (userMessage: string): string => {
+  const getBotResponse = async (userMessage: string): Promise<string> => {
     const msg = userMessage.toLowerCase();
-    if (msg.includes('blood pressure') || msg.includes('bp')) {
+    
+    // Check if the message is about symptoms or health concerns
+    if (msg.includes('experiencing') || 
+        msg.includes('symptoms') || 
+        msg.includes('feeling') || 
+        msg.includes('pain') || 
+        msg.includes('sick') ||
+        msg.includes('unwell') ||
+        msg.includes('suffering') ||
+        msg.includes('fever') ||
+        msg.includes('headache') ||
+        msg.includes('fatigue')) {
+      console.log('Detected health concern, routing to prediction service...');
+      // Use the chatService for health-related queries
+      return await chatService.processHealthQuery(userMessage);
+    } 
+    // Handle other types of queries
+    else if (msg.includes('blood pressure') || msg.includes('bp')) {
       return "I can help you log your blood pressure readings. What were your systolic and diastolic numbers?";
     } else if (msg.includes('weight')) {
       return "Great! I'll help you track your weight. What's your current weight?";
@@ -181,13 +199,13 @@ export default function WelcomeScreen() {
     } else if (msg.includes('appointment')) {
       return "I can help you track upcoming appointments. When is your next doctor visit?";
     } else if (msg.includes('help') || msg.includes('what can you do')) {
-      return "I can help you with:\n• Logging vital signs (blood pressure, weight, etc.)\n• Managing medications\n• Tracking appointments\n• General health questions";
+      return "I can help you with:\n• Analyzing symptoms and health concerns\n• Logging vital signs (blood pressure, weight, etc.)\n• Managing medications\n• Tracking appointments\n• General health questions";
     } else {
-      return "I'm here to help with your health tracking needs. You can ask me about logging vitals, medications, appointments, or any health-related questions!";
+      return "I'm here to help with your health tracking needs. You can tell me about any symptoms you're experiencing, or ask about logging vitals, medications, appointments, or any health-related questions!";
     }
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!message.trim()) return;
 
     const newMessage: ChatMessage = {
@@ -200,21 +218,46 @@ export default function WelcomeScreen() {
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
 
-    // Simulate bot response
-    setTimeout(() => {
+    // Add a processing indicator
+    const typingMessage: ChatMessage = {
+      id: messages.length + 2,
+      type: 'bot',
+      text: '🤔 Analyzing your symptoms...',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, typingMessage]);
+
+    try {
+      console.log('Processing message:', message);
+      // Get bot response
+      const responseText = await getBotResponse(message);
+      console.log('Received response:', responseText);
+      
+      // Replace typing indicator with actual response
       const botResponse: ChatMessage = {
         id: messages.length + 2,
         type: 'bot',
-        text: getBotResponse(message),
+        text: responseText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, botResponse]);
       
-      // Auto scroll to bottom
-      setTimeout(() => {
-        chatScrollRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }, 1000);
+      setMessages(prev => prev.slice(0, -1).concat(botResponse));
+    } catch (error: any) {
+      console.error('Error in chat processing:', error);
+      // Handle any errors
+      const errorResponse: ChatMessage = {
+        id: messages.length + 2,
+        type: 'bot',
+        text: `I'm sorry, I encountered an error: ${error.message || 'Unknown error'}. Please try again.`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => prev.slice(0, -1).concat(errorResponse));
+    }
+    
+    // Auto scroll to bottom
+    setTimeout(() => {
+      chatScrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const toggleChat = () => {

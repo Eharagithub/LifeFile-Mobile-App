@@ -77,7 +77,7 @@ export default function BottomNavigation({
           <Text style={styles && [
             styles.tabLabel,
             shouldHighlight && activeTab === 'notification' && styles.activeTabLabel
-          ]}>Notification</Text>
+          ]}>Alerts</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

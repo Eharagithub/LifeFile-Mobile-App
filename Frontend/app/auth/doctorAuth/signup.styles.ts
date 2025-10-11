@@ -1,0 +1,462 @@
+import { StyleSheet } from 'react-native';
+
+export default StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#f7f7f7',
+  },
+  container: {
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'stretch',
+    minHeight: 600,
+    flexGrow: 1,
+  },
+  heartIcon: {
+    width: 280,
+    height: 280,
+    marginBottom: -65,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: '100%',
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: -15,
+  },
+
+  stepsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    marginTop: -15,
+  },
+  stepCircleActive: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#a97bc7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e9e7ea',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNum: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  stepNumInactive: {
+    color: '#bdbdbd',
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  stepLine: {
+    width: 90,
+    height: 2,
+    backgroundColor: '#e9e7ea',
+    marginHorizontal: 2,
+  },
+  stepsLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+    marginTop: 2,
+    marginHorizontal: 12,
+  },
+  stepLabelActive: {
+    color: '#7d4c9e',
+    fontWeight: '700',
+    fontSize: 13,
+    width: 70,
+    textAlign: 'center',
+  },
+  stepLabel: {
+    color: '#bdbdbd',
+    fontWeight: '700',
+    fontSize: 13,
+    width: 70,
+    textAlign: 'center',
+  },
+
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#222',
+    marginLeft: 5,
+  },
+
+  sectionDivider: {
+    height:3,
+    backgroundColor: '#eee',
+    marginBottom: 12,
+    marginTop: 5,
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: '#222',
+    fontWeight: '600',
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  req: {
+    color: '#e24d4d',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f9f6',
+    borderColor: '#e4e4e4',
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 14,
+    paddingHorizontal: 10,
+    height: 44,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#222',
+    height: 44,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+  },
+  dropdown: {
+    flex: 1,
+    fontSize: 15,
+    color: '#222',
+    height: 44,
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    
+
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 40,
+    marginBottom: 12,
+    gap: 16,
+  },
+  exitBtn: {
+    flex: 1,
+    backgroundColor: '#e9e7ea',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  exitBtnText: {
+    color: '#7d4c9e',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  nextBtn: {
+    flex: 1,
+    backgroundColor: '#7d4c9e',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  nextBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
+  //createProfile.tsx
+  previousBtn: {
+    flex: 1,
+    backgroundColor: '#e9e7ea',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  previousBtnText: {
+    color: '#7d4c9e',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  loginText: {
+    color: '#222',
+    fontSize: 14,
+  },
+  loginLink: {
+    color: '#7d4c9e',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 2,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  profileAvatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#f6f6f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 18,
+    borderWidth: 1,
+    borderColor: '#e4e4e4',
+  },
+  profileIcon: {
+    color: '#bdbdbd',
+  },
+  profileTextCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  profileLabel: {
+    fontSize: 13,
+    color: '#222',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chooseFileBtn: {
+    backgroundColor: '#e9e7ea',
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  chooseFileText: {
+    color: '#222',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  fileName: {
+    color: '#bdbdbd',
+    fontSize: 13,
+  },
+
+  calendarInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#222",
+    height: 44,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+  },
+  datePickerButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
+  },
+  datePickerButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+  },
+  confirmButton: {
+    backgroundColor: 'transparent',
+  },
+  cancelButtonText: {
+    color: '#7d4c9e',
+    fontWeight: 'bold',
+  },
+  confirmButtonText: {
+    color: '#7d4c9e',
+    fontWeight: 'bold',
+  },
+  
+  // Year picker modal styles
+  datePickerModal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor: 'rgba(0, 0, 0, 0.5)'
+    fontSize: 15,
+    color: '#222',
+    backgroundColor: 'transparent',
+  },
+  datePickerContainer: {
+    width: '80%',
+    height: '20%',
+    backgroundColor: '#f6f9f6',
+    borderColor: '#e9d6f7',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#bdbdbd',
+    marginBottom: 15,
+  },
+  yearPickerContainer: {
+    width: '100%',
+    height: 50,
+    marginBottom: -10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  yearItem: {
+    padding: 10,
+    alignItems: 'center',
+  },
+  yearText: {
+    fontSize: 20,
+    color: '#333',
+  },
+  selectedYearText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#8A6FD0',
+  },
+
+
+  //healthProfile.tsx
+
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  textarea: {
+    backgroundColor: '#f6f9f6',
+    borderColor: '#e4e4e4',
+    borderWidth: 1,
+    borderRadius: 8,
+    fontSize: 15,
+    color: '#222',
+    minHeight: 60,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    marginBottom: 14,
+    textAlignVertical: 'top',
+  },
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    marginTop: 2,
+  },
+  radioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  radioOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#bdbdbd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  radioOuterActive: {
+    borderColor: '#7d4c9e',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#7d4c9e',
+  },
+  radioLabel: {
+    fontSize: 14,
+    color: '#222',
+    fontWeight: '500',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  checkbox: {
+    marginRight: 8,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#bdbdbd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxBoxChecked: {
+    borderColor: '#7d4c9e',
+    backgroundColor: '#f6f9f6',
+  },
+  checkboxText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#222',
+    flexWrap: 'wrap',
+  },
+  link: {
+    color: '#7d4c9e',
+    textDecorationLine: 'underline',
+  },
+  signUpButton: {
+    flex: 1,
+    backgroundColor: '#7d4c9e',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signUpButtonDisabled: {
+    backgroundColor: '#d1b3e0',
+  },
+});
