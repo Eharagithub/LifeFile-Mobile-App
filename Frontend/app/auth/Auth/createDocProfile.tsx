@@ -20,10 +20,6 @@ export default function CreateDocProfile() {
     const [introduction, setIntroduction] = useState('');
     const [experience, setExperience] = useState('');
     const [conditions, setConditions] = useState('');
-    const [consultationDays, setConsultationDays] = useState('');
-    const [consultationTimes, setConsultationTimes] = useState('');
-    const [eChannellingUrl, setEChannellingUrl] = useState('');
-    const [primaryCity, setPrimaryCity] = useState('');
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [fileName, setFileName] = useState('No file chosen');
     const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +34,6 @@ export default function CreateDocProfile() {
         setIntroduction('');
         setExperience('');
         setConditions('');
-        setConsultationDays('');
-        setConsultationTimes('');
-        setEChannellingUrl('');
-        setPrimaryCity('');
         setProfileImage(null);
         setFileName('No file chosen');
     });
@@ -131,10 +123,6 @@ export default function CreateDocProfile() {
                 introduction,
                 experience,
                 conditions,
-                consultationDays,
-                consultationTimes,
-                eChannellingUrl,
-                primaryCity,
                 profilePicture: profileImage || ''
             };
 
@@ -168,6 +156,21 @@ export default function CreateDocProfile() {
             <ScrollView contentContainerStyle={styles.container}>
                 <View style={styles.logoContainer}>
                     <Image source={require('../../../assets/images/logo.png')} style={styles.heartIcon} resizeMode="contain" />
+                </View>
+
+                <View style={styles.stepsRow}>
+                    <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>1</Text></View>
+                    <View style={styles.stepLine} />
+                    <View style={styles.stepCircleActive}><Text style={styles.stepNum}>2</Text></View>
+                </View>
+                {/* For doctor role, place labels immediately under their corresponding numbers using inline styles */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.stepLabel, { textAlign: 'center' }]}>Account</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.stepLabelActive, { textAlign: 'center' }]}>Personal</Text>
+                    </View>
                 </View>
 
                 <View style={styles.sectionTitleRow}>
@@ -214,26 +217,6 @@ export default function CreateDocProfile() {
                 <Text style={styles.inputLabel}>Conditions Treated</Text>
                 <View style={styles.inputWrapper}>
                     <TextInput style={styles.input} value={conditions} onChangeText={setConditions} placeholder="e.g. Hypertension" placeholderTextColor="#bdbdbd" />
-                </View>
-
-                <Text style={styles.inputLabel}>Consultation Days</Text>
-                <View style={styles.inputWrapper}>
-                    <TextInput style={styles.input} value={consultationDays} onChangeText={setConsultationDays} placeholder="Mon-Fri" placeholderTextColor="#bdbdbd" />
-                </View>
-
-                <Text style={styles.inputLabel}>Consultation Times</Text>
-                <View style={styles.inputWrapper}>
-                    <TextInput style={styles.input} value={consultationTimes} onChangeText={setConsultationTimes} placeholder="09:00 - 13:00" placeholderTextColor="#bdbdbd" />
-                </View>
-
-                <Text style={styles.inputLabel}>eChannelling URL</Text>
-                <View style={styles.inputWrapper}>
-                    <TextInput style={styles.input} value={eChannellingUrl} onChangeText={setEChannellingUrl} placeholder="https://..." placeholderTextColor="#bdbdbd" />
-                </View>
-
-                <Text style={styles.inputLabel}>Primary City</Text>
-                <View style={styles.inputWrapper}>
-                    <TextInput style={styles.input} value={primaryCity} onChangeText={setPrimaryCity} placeholder="Colombo" placeholderTextColor="#bdbdbd" />
                 </View>
 
                 <Text style={styles.inputLabel}>Profile Picture</Text>

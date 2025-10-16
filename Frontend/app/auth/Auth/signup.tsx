@@ -90,18 +90,40 @@ const SignUp: React.FC = () => {
             resizeMode="contain" />
         </View>
 
-        <View style={styles.stepsRow}>
-          <View style={styles.stepCircleActive}><Text style={styles.stepNum}>1</Text></View>
-          <View style={styles.stepLine} />
-          <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>2</Text></View>
-          <View style={styles.stepLine} />
-          <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>3</Text></View>
-        </View>
-        <View style={styles.stepsLabelRow}>
-          <Text style={styles.stepLabelActive}>Account</Text>
-          <Text style={styles.stepLabel}>Personal</Text>
-          <Text style={styles.stepLabel}>Health</Text>
-        </View>
+        {/* Render a 3-step progress for patients, 2-step for doctors */}
+        {role === 'patient' ? (
+          <>
+            <View style={styles.stepsRow}>
+              <View style={styles.stepCircleActive}><Text style={styles.stepNum}>1</Text></View>
+              <View style={styles.stepLine} />
+              <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>2</Text></View>
+              <View style={styles.stepLine} />
+              <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>3</Text></View>
+            </View>
+            <View style={styles.stepsLabelRow}>
+              <Text style={styles.stepLabelActive}>Account</Text>
+              <Text style={styles.stepLabel}>Personal</Text>
+              <Text style={styles.stepLabel}>Health</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.stepsRow}>
+              <View style={styles.stepCircleActive}><Text style={styles.stepNum}>1</Text></View>
+              <View style={styles.stepLine} />
+              <View style={styles.stepCircle}><Text style={styles.stepNumInactive}>2</Text></View>
+            </View>
+            {/* For doctor role, place labels immediately under their corresponding numbers using inline styles */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={[styles.stepLabelActive, { textAlign: 'center' }]}>Account</Text>
+              </View>
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={[styles.stepLabel, { textAlign: 'center' }]}>Personal</Text>
+              </View>
+            </View>
+          </>
+        )}
 
         <View style={styles.sectionTitleRow}>
           <Feather name="user" size={22} color="#8e2670" />
