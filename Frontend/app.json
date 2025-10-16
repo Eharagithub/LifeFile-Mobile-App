@@ -1,12 +1,11 @@
 {
   "expo": {
-    "scheme": "LifeFileapp", 
+    "scheme": "LifeFileapp",
     "name": "Frontend",
     "slug": "Frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -38,6 +37,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "backendUrl": "http://10.146.44.156:8000"
     }
   }
 }

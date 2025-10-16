@@ -5,13 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  ScrollView,Image, Alert, ActivityIndicator, StatusBar
+  ScrollView, Image, Alert, ActivityIndicator, StatusBar
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import styles from './signup.styles';
 import { useRouter } from 'expo-router';
 import { firebase } from '../../../config/firebaseConfig';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
 import AuthService from '../../../services/authService';
 
 
@@ -23,6 +22,7 @@ const SignUp: React.FC = () => {
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [role, setRole] = useState<'patient' | 'doctor'>('patient');
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState('');
 
@@ -35,50 +35,59 @@ const SignUp: React.FC = () => {
     router.push('/auth/login');
   };
 
-  const createProfile = (uid: string) => {
-    router.push({
-      pathname: '/auth/patientAuth/createProfile',
-      params: { userId: uid }
-    });
+  const createProfile = (uid: string, selectedRole: 'patient' | 'doctor') => {
+    // Navigate to the correct personal info screen based on selected role
+    if (selectedRole === 'doctor') {
+      router.push({
+        pathname: '/auth/Auth/createDocProfile',
+        params: { userId: uid, role: 'doctor' }
+      });
+    } else {
+      router.push({
+        pathname: '/auth/Auth/createProfile',
+        params: { userId: uid, role: 'patient' }
+      });
+    }
   };
 
   const handleSignUp = async () => {
-  if (!email || !password || !confirm) {
-    Alert.alert('Error', 'Please fill in all required fields');
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-    const result = await AuthService.createUserAccount(email, password, confirm);
-    
-    if (result.success && result.uid) {
-      console.log('User created successfully with ID:', result.uid);
-      createProfile(result.uid);
-    } else {
-      Alert.alert('Signup Failed', result.error || 'Unknown error occurred');
+    if (!email || !password || !confirm) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
     }
-  } catch (error) {
-    console.error('Unexpected error during signup:', error);
-    Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    try {
+      setIsLoading(true);
+      const result = await AuthService.createUserAccount(email, password, confirm, role);
+
+      if (result.success && result.uid) {
+        console.log(`User created successfully with ID: ${result.uid} as ${role}`);
+        // Pass the currently selected role when navigating
+        createProfile(result.uid, role);
+      } else {
+        Alert.alert('Signup Failed', result.error || 'Unknown error occurred');
+      }
+    } catch (error) {
+      console.error('Unexpected error during signup:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
   return (
-   
+
     <SafeAreaView style={styles.safe}>
-       <StatusBar 
-            backgroundColor={"white"}
-    />
+      <StatusBar
+        backgroundColor={"white"}
+      />
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.logoContainer}>
           <Image source={require('../../../assets/images/logo.png')}
-                 style={styles.heartIcon}
-                 resizeMode="contain"/>
+            style={styles.heartIcon}
+            resizeMode="contain" />
         </View>
 
         <View style={styles.stepsRow}>
@@ -100,6 +109,37 @@ const SignUp: React.FC = () => {
         </View>
 
         <View style={styles.sectionDivider} />
+
+        <Text style={styles.inputLabel}>I’m Signing Up As a... <Text style={styles.req}>*</Text></Text>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+          <TouchableOpacity
+            onPress={() => setRole('patient')}
+            style={{ flexDirection: 'row', alignItems: 'center', marginRight: 30 }}
+          >
+            <Feather
+              name={role === 'patient' ? 'check-circle' : 'circle'}
+              size={20}
+              color={role === 'patient' ? '#8e2670' : '#bdbdbd'}
+            />
+            <Text style={{ marginLeft: 8, color: '#333' }}>Patient</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setRole('doctor')}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            <Feather
+              name={role === 'doctor' ? 'check-circle' : 'circle'}
+              size={20}
+              color={role === 'doctor' ? '#8e2670' : '#bdbdbd'}
+            />
+            <Text style={{ marginLeft: 8, color: '#333' }}>Doctor</Text>
+          </TouchableOpacity>
+        </View>
+
+
+
         <Text style={styles.inputLabel}>
           Email (Will be the User Name)<Text style={styles.req}>*</Text>
         </Text>
@@ -155,14 +195,14 @@ const SignUp: React.FC = () => {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.exitBtn} 
-          onPress={handleLogin}
+          <TouchableOpacity style={styles.exitBtn}
+            onPress={handleLogin}
           >
             <Text style={styles.exitBtnText}>Exit</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.nextBtn} 
+
+          <TouchableOpacity
+            style={styles.nextBtn}
             onPress={handleSignUp}
             disabled={isLoading}
           >
@@ -176,8 +216,8 @@ const SignUp: React.FC = () => {
 
         <View style={styles.loginRow}>
           <Text style={styles.loginText}>Already have an account? </Text>
-          <TouchableOpacity 
-          onPress={handleLogin}
+          <TouchableOpacity
+            onPress={handleLogin}
           >
             <Text style={styles.loginLink}>Login</Text>
           </TouchableOpacity>

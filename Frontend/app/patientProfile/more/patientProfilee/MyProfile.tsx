@@ -21,13 +21,8 @@ import { ChangePw } from './editProfile/changepw';
 import ContactInforScreen from './editProfile/contactInfor';
 
 // Firebase imports from firebaseConfig.ts
-import { db, storage, auth } from '../../../../config/firebaseConfig';
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  setDoc
-} from 'firebase/firestore';
+import { storage, auth } from '../../../../config/firebaseConfig';
+import AuthService from '../../../../services/authService';
 import {
   ref,
   uploadBytes,
@@ -120,26 +115,43 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
     try {
       setLoading(true);
-      const userDocRef = doc(db, "users", userId);
-      const userDoc = await getDoc(userDocRef);
 
-      if (userDoc.exists()) {
-        const data = userDoc.data() as UserData;
-        setUserData(data);
+      // Determine role and fetch the correct document
+      const roles = await AuthService.determineRoles(userId!);
+      if (roles.error === 'permission-denied') {
+        console.error('Permission denied when fetching role information');
+        Alert.alert('Error', 'Missing permissions to read your profile. Please contact support.');
+        setLoading(false);
+        return;
+      }
+
+      // Prefer patient role for this screen
+      let roleToUse: 'patient' | 'doctor' | null = null;
+      if (roles.isPatient) roleToUse = 'patient';
+      else if (roles.isDoctor) roleToUse = 'doctor';
+
+      if (!roleToUse) {
+        // If no specific profile exists, fallback to creating a minimal Patient document
+        Alert.alert('No profile', 'No patient or doctor profile found for this account.');
+        setLoading(false);
+        return;
+      }
+
+      const result = await AuthService.getUserData(userId!, roleToUse);
+      if (result.success && result.data) {
+        const data = result.data as any;
+        setUserData({
+          fullName: data.personal?.fullName || currentUser?.displayName || 'User',
+          email: data.email || currentUser?.email || '',
+          profilePicture: data.personal?.profilePicture || currentUser?.photoURL || ''
+        });
       } else {
-        // If user document doesn't exist, create one with default values
-        const defaultUserData: UserData = {
-          fullName: currentUser?.displayName || "User",
-          email: currentUser?.email || "",
-          profilePicture: currentUser?.photoURL || "",
-        };
-
-        await setDoc(userDocRef, defaultUserData);
-        setUserData(defaultUserData);
+        console.error('Error fetching user data:', result.error);
+        Alert.alert('Error', 'Failed to load profile data. Please try again.');
       }
     } catch (error: any) {
-      console.error("Error fetching user data:", error?.message || error);
-      Alert.alert("Error", "Failed to load user data. Please try again.");
+      console.error('Error fetching user data:', error?.message || error);
+      Alert.alert('Error', 'Failed to load user data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -157,16 +169,33 @@ const FirestoreMyProfileScreen: React.FC = () => {
     }
 
     try {
-      const userDocRef = doc(db, "users", userId);
-      await updateDoc(userDocRef, updatedData);
+      // Determine role and update the appropriate collection
+      const roles = await AuthService.determineRoles(userId!);
+      if (roles.error === 'permission-denied') {
+        Alert.alert('Error', 'Missing permissions to update your profile. Please contact support.');
+        return;
+      }
 
-      // Update local state
-      setUserData(prev => prev ? { ...prev, ...updatedData } : null);
+      let roleToUse: 'patient' | 'doctor' | null = null;
+      if (roles.isPatient) roleToUse = 'patient';
+      else if (roles.isDoctor) roleToUse = 'doctor';
 
-      Alert.alert("Success", "Profile updated successfully!");
+      if (!roleToUse) {
+        Alert.alert('Error', 'No profile exists to update for this account.');
+        return;
+      }
+
+      const res = await AuthService.updateUserProfile(userId!, { personal: updatedData as any }, roleToUse);
+      if (res.success) {
+        setUserData(prev => prev ? { ...prev, ...updatedData } : null);
+        Alert.alert('Success', 'Profile updated successfully!');
+      } else {
+        console.error('Error updating profile:', res.error);
+        Alert.alert('Error', res.error || 'Failed to update profile. Please try again.');
+      }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
     }
   };
 

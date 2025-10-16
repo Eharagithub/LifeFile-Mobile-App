@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import { FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icon
 import styles from '../patientProfile/patientHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
 import { useRouter } from 'expo-router';
-import { auth, db } from '../../config/firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth } from '../../config/firebaseConfig';
+import AuthService from '../../services/authService';
 import { getAllHealthNews } from '../../services/newsService';
 
 // Add global type declaration for EventEmitter
@@ -71,7 +71,7 @@ export default function PatientHome() {
   });
 
   // Health-related keywords for filtering (English and Sinhala)
-  const healthKeywords = [
+  const healthKeywords = useMemo(() => [
     // English keywords
     'health', 'medical', 'hospital', 'doctor', 'medicine', 'disease', 'virus', 'covid', 'vaccine',
     'treatment', 'surgery', 'patient', 'clinic', 'pharmacy', 'wellness', 'fitness', 'nutrition',
@@ -83,7 +83,7 @@ export default function PatientHome() {
     'සෞඛ්‍ය', 'වෛද්‍ය', 'රෝහල', 'ඖෂධ', 'රෝග', 'ප්‍රතිකාර', 'ශල්‍යකර්ම', 'රෝගී', 'ක්ලිනික්',
     'ෆාමසි', 'සෞඛ්‍ය සේවා', 'මානසික සෞඛ්‍ය', 'දියවැඩියාව', 'පිළිකා', 'හෘද', 'රුධිර පීඩනය',
     'කොලෙස්ටරෝල්', 'තරබාරුකම', 'වසංගත', 'ලක්ෂණ', 'රෝග විනිශ්චය', 'චිකිත්සාව'
-  ];
+  ], []);
 
   // Categorize news based on content
   const categorizeNews = (title: string, description: string = ''): NewsItem['category'] => {
@@ -112,7 +112,7 @@ export default function PatientHome() {
   };
 
   // Filter health-related news
-  const filterHealthNews = (newsItems: NewsItem[]): NewsItem[] => {
+  const filterHealthNews = useCallback((newsItems: NewsItem[]): NewsItem[] => {
     return newsItems.filter(item => {
       const content = `${item.title} ${item.description || ''}`.toLowerCase();
       return healthKeywords.some(keyword =>
@@ -126,7 +126,7 @@ export default function PatientHome() {
         isLocal: isLocalSource(item.source || ''),
         priority: getPriority(item.title, item.description || '')
       }));
-  };
+  }, [healthKeywords]);
 
   // Check if source is local (Sri Lankan)
   const isLocalSource = (source: string): boolean => {
@@ -152,7 +152,7 @@ export default function PatientHome() {
   };
 
   // Enhanced news loading with health filtering
-  const loadNews = async () => {
+  const loadNews = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Loading health news...');
@@ -207,7 +207,7 @@ export default function PatientHome() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterHealthNews]);
 
   // Enhanced refresh with better user feedback
   const onRefresh = async () => {
@@ -228,7 +228,7 @@ export default function PatientHome() {
   // Load news on component mount
   useEffect(() => {
     loadNews();
-  }, []);
+  }, [loadNews]);
 
   // Navigation handlers
   const handleViewHistory = () => {
@@ -255,13 +255,29 @@ export default function PatientHome() {
         }
 
         const userId = currentUser.uid;
-        const userDocRef = doc(db, "users", userId);
-        const userDocSnap = await getDoc(userDocRef);
+        // Determine role and fetch from the correct collection
+        const roles = await AuthService.determineRoles(userId);
 
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          const personalData = userData.personal || {};
+        if (roles.error === 'permission-denied') {
+          console.error('Permission denied when fetching role information');
+          // fallback to guest
+          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
+          return;
+        }
 
+        // Prefer patient data if available (this is the patient home)
+        let roleToUse: 'patient' | 'doctor' | null = null;
+        if (roles.isPatient) roleToUse = 'patient';
+        else if (roles.isDoctor) roleToUse = 'doctor';
+
+        if (!roleToUse) {
+          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
+          return;
+        }
+
+        const userResult = await AuthService.getUserData(userId, roleToUse);
+        if (userResult.success && userResult.data) {
+          const personalData = userResult.data.personal || {} as any;
           const fullName = personalData.fullName || 'Guest';
           const nameParts = fullName.trim().split(' ');
           const firstName = nameParts[0] || '';
@@ -274,12 +290,8 @@ export default function PatientHome() {
             profilePicture: personalData.profilePicture || ''
           });
         } else {
-          setUserProfile({
-            fullName: 'Guest User',
-            firstName: 'Guest',
-            lastName: 'User',
-            profilePicture: ''
-          });
+          console.error('Error fetching user data:', userResult.error);
+          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
         }
       } catch (error) {
         console.error("Error fetching user data:", error);

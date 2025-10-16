@@ -12,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function CreateProfile() {
     const router = useRouter();
-    const { userId } = useLocalSearchParams();
+    const { userId, role } = useLocalSearchParams();
     const [fullName, setFullName] = useState('');
     const [dob, setDob] = useState('');
     const [nic, setNic] = useState('');
@@ -126,7 +126,7 @@ export default function CreateProfile() {
 
     // Handle previous button click
     const handleSignup = () => {
-        router.push('/auth/patientAuth/signup');
+        router.push('/auth/Auth/signup');
      };
 
     const goToHealthProfile = async () => {
@@ -139,9 +139,9 @@ export default function CreateProfile() {
   try {
     setIsLoading(true);
 
-    if (!userId) {
+        if (!userId) {
       Alert.alert('Error', 'User ID is missing. Please sign up again.');
-      router.push('/auth/patientAuth/signup');
+      router.push('/auth/Auth/signup');
       return;
     }
 
@@ -157,12 +157,14 @@ export default function CreateProfile() {
       updatedAt: new Date().toISOString()
     };
 
-    const result = await AuthService.savePersonalInformation(userId as string, personalData);
+    // Use role param if provided, otherwise default to 'patient'
+    const userRole = (role === 'doctor' || role === 'patient') ? role as 'doctor' | 'patient' : 'patient';
+    const result = await AuthService.savePersonalInformation(userId as string, personalData, userRole);
     
     if (result.success) {
       console.log('Personal profile data saved for user:', userId);
       router.push({
-        pathname: '/auth/patientAuth/healthProfile',
+        pathname: '/auth/Auth/healthProfile',
         params: { userId }
       });
     } else {

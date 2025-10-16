@@ -13,7 +13,7 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
 import styles from './login.styles';
-import { firebase } from '../../config/firebaseConfig';
+import AuthService from '../../services/authService';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
@@ -25,15 +25,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // Firebase login function
-  const loginUser = async (email: string, password: string) => {
-    try {
-      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-      return { success: true, user: userCredential.user };
-    } catch (error) {
-      return { success: false, error };
-    }
-  };
+  // Use AuthService for sign-in
 
   // Handle login functionality
   const handleLogin = async () => {
@@ -43,20 +35,55 @@ const LoginScreen = () => {
     }
 
     setIsLoading(true);
-  
+
     try {
-      const result = await loginUser(email, password);
-      
-      if (result.success) {
-        
-                router.push('/patientProfile/patientHome');
-      } else {
-        // We have the error from result.error but don't need to use it specifically
-        Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+      const signInResult = await AuthService.signInUser(email, password);
+
+      if (!signInResult.success || !signInResult.uid) {
+        Alert.alert('Login Failed', signInResult.error || 'Invalid email or password. Please try again.');
+        return;
       }
-    } catch {
-      // We're using a generic error message regardless of the specific error
-      Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+
+      const uid = signInResult.uid;
+
+      // Determine which roles the authenticated user has
+      const roles = await AuthService.determineRoles(uid);
+
+      if (roles.error === 'permission-denied') {
+        Alert.alert('Permission denied', 'The app does not have permission to read your profile. Please check Firestore rules or contact support.');
+        return;
+      }
+
+      if (roles.isPatient && !roles.isDoctor) {
+        router.replace('/patientProfile/patientHome');
+        return;
+      }
+
+      if (roles.isDoctor && !roles.isPatient) {
+        router.replace('/doctorProfile/doctorHome');
+        return;
+      }
+
+      // If user has both roles, ask which one to continue with
+      if (roles.isDoctor && roles.isPatient) {
+        Alert.alert(
+          'Choose Role',
+          'This account has both Doctor and Patient profiles. Which role would you like to use for this session?',
+          [
+            { text: 'Doctor', onPress: () => router.replace('/doctorProfile/doctorHome') },
+            { text: 'Patient', onPress: () => router.replace('/patientProfile/patientHome') },
+            { text: 'Cancel', style: 'cancel' }
+          ],
+          { cancelable: true }
+        );
+        return;
+      }
+
+      // If no role found
+      Alert.alert('No profile', 'No patient or doctor profile found for this account. Please contact support.');
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong during login');
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +91,7 @@ const LoginScreen = () => {
 
   // Handle signup navigation 
   const handleSignup = () => {
-    router.push('/auth/patientAuth/signup');
+    router.push('/auth/Auth/signup');
   };
 
   // Handle forgot password
@@ -74,28 +101,29 @@ const LoginScreen = () => {
       "Reset Password",
       "Please enter your email to receive a password reset link",
       [
-        { 
-          text: "Cancel", 
-          style: "cancel" 
+        {
+          text: "Cancel",
+          style: "cancel"
         },
         {
           text: "Reset Password",
           onPress: async () => {
             if (!email) {
-              Alert.alert("Error", "Please enter your email address first");
+              Alert.alert('Error', 'Please enter your email address first');
               return;
             }
-            
+
             try {
               setIsLoading(true);
-              await firebase.auth().sendPasswordResetEmail(email);
-              Alert.alert("Success", "Password reset email has been sent to your email address");
-            } catch (error) {
-              if (error instanceof Error) {
-                Alert.alert("Error", error.message);
+              const res = await AuthService.resetPassword(email);
+              if (res.success) {
+                Alert.alert('Success', 'Password reset email has been sent to your email address');
               } else {
-                Alert.alert("Error", "Failed to send password reset email");
+                Alert.alert('Error', res.error || 'Failed to send password reset email');
               }
+            } catch (err) {
+              console.error('Password reset error', err);
+              Alert.alert('Error', 'Failed to send password reset email');
             } finally {
               setIsLoading(false);
             }
@@ -117,8 +145,8 @@ const LoginScreen = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Feather name="chevron-left" size={30} color="#222" />
@@ -178,7 +206,7 @@ const LoginScreen = () => {
         </View>
 
         {/* Forgot Password */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.forgotPasswordContainer}
           onPress={handleForgotPassword}
         >
@@ -186,8 +214,8 @@ const LoginScreen = () => {
         </TouchableOpacity>
 
         {/* Login Button */}
-        <TouchableOpacity 
-          style={styles.loginButton} 
+        <TouchableOpacity
+          style={styles.loginButton}
           onPress={handleLogin}
           disabled={isLoading}
         >
@@ -214,7 +242,7 @@ const LoginScreen = () => {
         </View>
 
         {/* Google Sign-in */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.googleButton}
           onPress={handleGoogleSignIn}
         >

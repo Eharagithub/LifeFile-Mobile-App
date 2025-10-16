@@ -80,7 +80,7 @@ export default function MedicalProfile() {
   // Navigation functions
   const createProfile = () => {
     router.push({
-      pathname: '/auth/patientAuth/createProfile',
+      pathname: '/auth/Auth/createProfile',
       params: { userId }
     });
   };
@@ -100,7 +100,7 @@ export default function MedicalProfile() {
     // Check userId
     if (!userId) {
       Alert.alert('Error', 'User ID is missing. Please sign up again.');
-      router.push('/auth/patientAuth/signup');
+      router.push('/auth/Auth/signup');
       return;
     }
 

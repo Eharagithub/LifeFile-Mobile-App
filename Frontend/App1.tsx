@@ -6,7 +6,7 @@ import { User } from "firebase/auth";
 import { firebase } from "./config/firebaseConfig";
 
 import Login from "./app/auth/login";
-import Signup from "./app/auth/patientAuth/signup";
+import Signup from "./app/auth/Auth/signup";
 import Home from "./app/patientProfile/patientHome";
 //import Header from "./app/common/header";
 
