@@ -152,7 +152,7 @@ const Uploads: React.FC = () => {
                 >
                     <Feather name="chevron-left" size={24} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Wellness Hub</Text>
+                <Text style={styles.headerTitle}>Uploads</Text>
             </View>
 
             {/* Content */}

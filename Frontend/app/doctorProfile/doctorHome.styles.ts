@@ -1,23 +1,28 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#F5F5F5',
   },
    header: {
     backgroundColor: '#f2e6ff',
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal:35,
+    
   },
+  
+  
+  
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
   },
+  
   profileImage: {
     width: 60,
     height: 60,
@@ -26,312 +31,178 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#f8f8f8',
   },
+  
   welcomeText: {
     flex: 1,
   },
+  
   welcomeTitle: {
     fontSize: 16,
     color: '#444',
     fontWeight: '500',
   },
+  
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#222',
     marginBottom: 2,
   },
+  
   welcomeSubtitle: {
     fontSize: 14,
     color: '#777',
     fontWeight: '400',
   },
-  content: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-  },
-  quickActions: {
+
+ 
+ 
+  statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#f2e6ff',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius:24,
+    justifyContent: 'space-around',
+    marginTop: 10,
   },
-  actionButton: {
+  statCard: {
     alignItems: 'center',
-    width: '31%'
   },
-  actionIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#7d4c9e',
+  statCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#8B52A8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
-  actionText: {
+  statNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  statLabel: {
     fontSize: 13,
     color: '#333',
     fontWeight: '500',
-    textAlign: 'center',
-     marginBottom: 10,
   },
-  articlesSection: {
-      marginBottom: 20,
+  consultationsSection: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginTop: -15,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-    marginLeft: 15,
-    marginRight: 20,
-    marginTop: 20,
+    marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#333',
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  refreshIconButton: {
-    padding: 8,
-    color: '#f8f8f8'
-  },
-  seeAllLink: {
+  seeAllText: {
     fontSize: 14,
-    color: '#7d4c9e',
-    fontWeight: '600',
-  },
-  lastUpdatedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-    marginLeft: 15,
-  },
-  lastUpdatedText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 6,
-  },
-  filterContainer: {
-    marginBottom: 16,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  activeFilter: {
-    backgroundColor: '#f8f8f8',
-    borderColor: '#f8f8f8',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#666',
+    color: '#8B52A8',
     fontWeight: '500',
   },
-  activeFilterText: {
-    color: '#fff',
-  },
-  articleItem: {
-      flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  articleImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  articleContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  articleHeader: {
+  searchContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  categoryBadge: {
-    backgroundColor: '#dabaf5',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  categoryText: {
-    color: '#242324',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  localBadge: {
-    backgroundColor: '#34C759',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  localText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  articleTitle: {
-     fontSize: 14,
-    fontWeight: '600',
-    color: '#222',
-    lineHeight: 20,
-  },
-  articleDescription: {
-    fontSize: 12,
-    color: '#666',
-      marginTop: 2,
-    marginBottom: 4,
-  },
-  articleMetaContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  articleMetaLeft: {
-    flex: 1,
-  },
-  articleMeta: {
-    fontSize: 11,
-    color: '#888',
-  },
-  languageTag: {
-    backgroundColor: '#foebf7',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  languageTagText: {
-    fontSize: 10,
-    color: '#7d4c9e',
-    fontWeight: '600',
-  },
-  bookmarkButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#e9ecef',
-    marginVertical: 8,
-  },
-  noNewsContainer: {
-      padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    marginVertical: 10,
-    backgroundColor: '#fff',
-  },
-  noNewsText: {
-       fontSize: 16,
-    color: '#888',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     marginBottom: 15,
   },
-  noNewsSubtext: {
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
     fontSize: 14,
-    color: '#888',
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
+    color: '#333',
   },
-  refreshButton: {
+  consultationsList: {
+    flex: 1,
+  },
+  consultationItem: {
     flexDirection: 'row',
-    backgroundColor: '#7d4c9e',
-    paddingVertical:8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  consultationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  consultationInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  appointmentTime: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 2,
+  },
+  appointmentDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  bookmarkButton: {
+    padding: 5,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    justifyContent: 'space-around',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  navItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 5,
   },
-  refreshButtonText: {
-    marginLeft: 8,
-    color: '#fff',
-    fontSize: 14,
+  navText: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    marginTop: 4,
     fontWeight: '500',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  navTextActive: {
+    color: '#8B52A8',
   },
-  spaceBetween: {
-    justifyContent: 'space-between',
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  doctorCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-  },
-
-  doctorName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
-  },
-
-  doctorSpecialty: {
-    fontSize: 13,
-    color: '#4b5563',
-    marginTop: 4,
-  },
-
-  appointmentButton: {
-    marginTop: 10,
-    backgroundColor: '#7d4c9e',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-
-  appointmentButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  }
-
 });
 
 export default styles;

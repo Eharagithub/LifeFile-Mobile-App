@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",
@@ -39,7 +40,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "backendUrl": "http://10.146.44.156:8000"
+      "backendUrl": "http://10.181.219.156:8001"
     }
   }
 }

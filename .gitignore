@@ -1,6 +1,7 @@
 
 # Ignore the liffile-auth-service.json file
 Backend/Auth_service/liffile-auth-service.json
+Frontend/config/firebaseConfig.tsx
 
 # Ignore the instruction file
 instruction.txt

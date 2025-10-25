@@ -1,0 +1,9 @@
+fastapi
+pydantic
+uvicorn
+requests
+python-dotenv
+langchain>=0.0.300
+google-cloud-aiplatform>=1.26.0
+# The package providing VertexAI integration (best-effort name). If not available, VertexAI fallback remains.
+langchain-google-vertexai

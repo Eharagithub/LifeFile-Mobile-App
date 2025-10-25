@@ -1,0 +1,57 @@
+# Backend (Python) ignores
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# MyPy
+.mypy_cache/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+
+# IDEs
+.vscode/
+.idea/
+
+# System
+.DS_Store
+
+# Backend-specific secrets / service files
+Auth_service/liffile-auth-service.json
+
+# Local state/session files
+.env
+.env.*
+instance/
+
+# Logs
+*.log
+
+# Node (if any frontend or scripts live here)
+node_modules/
