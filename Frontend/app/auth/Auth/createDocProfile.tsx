@@ -4,7 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import styles from '../Auth/signup.styles';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AuthService from '../../../services/authService';
-import { db } from '../../../config/firebaseConfig';
+// Explicitly include the file extension to help the Metro resolver on case-sensitive builders
+import { db } from '../../../config/firebaseConfig.tsx';
 import { doc, setDoc } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 
