@@ -593,6 +593,21 @@ class AuthService {
         await db.collection(role === 'patient' ? 'Patient' : 'Doctor').doc(uid).update(updatesToApply);
       }
 
+      // ALSO update health/common subdocument when health fields are present.
+      // The mobile app reads patient health data from Patient/{uid}/health/common, so
+      // keep that document in sync by merging the provided health fields into it.
+      if (sanitizedUpdates.health) {
+        try {
+          const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
+          const healthRef = db.collection(collectionName).doc(uid).collection('health').doc('common');
+          // Use set with merge to update only provided keys and preserve others.
+          await healthRef.set(sanitizedUpdates.health, { merge: true });
+        } catch (err: any) {
+          // Log but do not fail the whole operation when subdoc update fails (permissions may vary).
+          console.warn('Failed to update health/common subdoc:', err);
+        }
+      }
+
       return { success: true };
     } catch (error: any) {
       console.error('Error updating user profile:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -13,8 +13,7 @@ import {
     Dimensions,
     StyleSheet
 } from 'react-native';
-import { Feather, } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import { Feather } from '@expo/vector-icons';
 
 // Firebase imports
 import { db, auth } from '../../../../../config/firebaseConfig';
@@ -45,6 +44,7 @@ const UpdateHealthScreen: React.FC<UpdateHealthProps> = ({
     const [allergies, setAllergies] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [role, setRole] = useState<'patient' | 'doctor'>('patient');
+    const initialHealthRef = useRef<{ weight?: string; height?: string; bmi?: string; bloodType?: string; allergies?: string } | null>(null);
 
     // Get current user ID from Firebase Auth
     const currentUser = auth.currentUser;
@@ -82,12 +82,39 @@ const UpdateHealthScreen: React.FC<UpdateHealthProps> = ({
                     // Use authService.getUserData which handles Patient/Doctor collection logic
                     const res = await authService.getUserData(userId);
                     if (res.success && res.data) {
-                        const data = res.data as any; // cast to any since personal may contain dynamic fields like weight/height/bmi
-                        setWeight(data?.personal?.weight || '');
-                        setHeight(data?.personal?.height || '');
-                        setBmi(data?.personal?.bmi || '');
-                        setBloodType(data?.personal?.bloodType || '');
-                        setAllergies(data?.personal?.allergies || '');
+                        const data = res.data as any;
+                        // Health data may be stored under top-level `health` map or under `personal` in some legacy docs.
+                        // Also some code writes health into a subcollection at Patient/{uid}/health/common.
+                        const source = (data?.health) || (data?.personal) || {};
+                        let mergedSource = { ...source };
+
+                        // If top-level maps are empty, try reading the health/common subdoc for values.
+                        try {
+                            const collectionName = data?.role === 'doctor' ? 'Doctor' : 'Patient';
+                            const healthDocRef = db.collection(collectionName).doc(userId).collection('health').doc('common');
+                            const healthDoc = await healthDocRef.get();
+                            if (healthDoc.exists) {
+                                const healthData = healthDoc.data() || {};
+                                // Prefer explicit top-level fields, but fill gaps from subdoc
+                                mergedSource = { ...healthData, ...mergedSource };
+                            }
+                        } catch (err) {
+                            // ignore subcollection read errors (permissions) and continue with what we have
+                            console.debug('Could not read health/common subdoc:', err);
+                        }
+                        const sourceFinal = mergedSource;
+                        const fetchedWeight = sourceFinal?.weight || '';
+                        const fetchedHeight = sourceFinal?.height || '';
+                        const fetchedBmi = sourceFinal?.bmi || '';
+                        const fetchedBloodType = sourceFinal?.bloodType || '';
+                        const fetchedAllergies = sourceFinal?.allergies || '';
+
+                        setWeight(fetchedWeight);
+                        setHeight(fetchedHeight);
+                        setBmi(fetchedBmi);
+                        setBloodType(fetchedBloodType);
+                        setAllergies(fetchedAllergies);
+                        initialHealthRef.current = { weight: fetchedWeight, height: fetchedHeight, bmi: fetchedBmi, bloodType: fetchedBloodType, allergies: fetchedAllergies };
                         // remember role for writes
                         if (data.role === 'doctor') setRole('doctor');
                         else setRole('patient');
@@ -97,23 +124,46 @@ const UpdateHealthScreen: React.FC<UpdateHealthProps> = ({
                             const userDocRef = db.collection('users').doc(userId);
                             const doc = await userDocRef.get();
                             if (doc.exists) {
-                                const data = doc.data();
-                                setWeight(data?.personal?.weight || '');
-                                setHeight(data?.personal?.height || '');
-                                setBloodType(data?.personal?.bloodType || '');
-                                setAllergies(data?.personal?.allergies || '');
+                                const docData = doc.data() || {};
+                                const source = docData.health || docData.personal || {};
+                                let mergedSourceLegacy = { ...source };
+                                try {
+                                    // also try health/common under legacy users? most likely not present, but safe to attempt
+                                    const healthCommon = await db.collection('users').doc(userId).collection('health').doc('common').get();
+                                    if (healthCommon.exists) {
+                                        mergedSourceLegacy = { ...(healthCommon.data() || {}), ...mergedSourceLegacy };
+                                    }
+                                } catch (err) {
+                                    console.debug('Could not read legacy users health/common:', err);
+                                }
+                                const fetchedWeight = mergedSourceLegacy?.weight || '';
+                                const fetchedHeight = mergedSourceLegacy?.height || '';
+                                const fetchedBmi = mergedSourceLegacy?.bmi || '';
+                                const fetchedBloodType = mergedSourceLegacy?.bloodType || '';
+                                const fetchedAllergies = mergedSourceLegacy?.allergies || '';
+
+                                setWeight(fetchedWeight);
+                                setHeight(fetchedHeight);
+                                setBmi(fetchedBmi);
+                                setBloodType(fetchedBloodType);
+                                setAllergies(fetchedAllergies);
+                                initialHealthRef.current = { weight: fetchedWeight, height: fetchedHeight, bmi: fetchedBmi, bloodType: fetchedBloodType, allergies: fetchedAllergies };
                             } else {
                                 setWeight('');
                                 setHeight('');
+                                setBmi('');
                                 setBloodType('');
                                 setAllergies('');
+                                initialHealthRef.current = { weight: '', height: '', bmi: '', bloodType: '', allergies: '' };
                             }
                         } catch (legacyErr) {
                             console.warn('Fallback read from users collection failed:', legacyErr);
                             setWeight('');
                             setHeight('');
+                            setBmi('');
                             setBloodType('');
                             setAllergies('');
+                            initialHealthRef.current = { weight: '', height: '', bmi: '', bloodType: '', allergies: '' };
                         }
                     }
                 } catch (error: any) {
@@ -163,17 +213,23 @@ const UpdateHealthScreen: React.FC<UpdateHealthProps> = ({
             const computedBmi = (w / (heightMeters * heightMeters));
             const bmiValue = computedBmi.toFixed(1);
 
-            // Prepare updated data for the 'health' map field
-            const updatedHealthData = {
-                weight: String(w),
-                height: String(h),
-                bmi: bmiValue,
-                bloodType: bloodType.trim(),
-                allergies: allergies,
-            };
+            // Prepare partial updated data for the 'health' map field - include only changed fields
+            const initial = initialHealthRef.current || {};
+            const partialHealth: any = {};
+            if (String(w) !== String(initial.weight || '')) partialHealth.weight = String(w);
+            if (String(h) !== String(initial.height || '')) partialHealth.height = String(h);
+            if ((bmiValue) !== String(initial.bmi || '')) partialHealth.bmi = bmiValue;
+            if (bloodType.trim() !== String(initial.bloodType || '')) partialHealth.bloodType = bloodType.trim();
+            if ((allergies || '') !== String(initial.allergies || '')) partialHealth.allergies = allergies;
+
+            if (Object.keys(partialHealth).length === 0) {
+                setLoading(false);
+                Alert.alert('No changes', 'No health changes detected to save.');
+                return;
+            }
 
             // Use centralized authService to perform a partial health update via updateUserProfile
-            const res = await authService.updateUserProfile(userId, { health: updatedHealthData } as any, role);
+            const res = await authService.updateUserProfile(userId, { health: partialHealth } as any, role);
             setLoading(false);
             if (res.success) {
                 Alert.alert('Success', 'Profile updated successfully!');

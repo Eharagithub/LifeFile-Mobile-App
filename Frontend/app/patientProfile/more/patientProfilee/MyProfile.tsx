@@ -19,6 +19,8 @@ import styles from './MyProfile.styles';
 import EditProfileScreen from './editProfile/personalinfooredit';
 import { ChangePw } from './editProfile/changepw';
 import ContactInforScreen from './editProfile/contactInfor';
+import UpdateHealthScreen from './editProfile/updateHealth';
+import LifeStyleScreen from './editProfile/lifeStyle';
 
 // Firebase imports from firebaseConfig.ts
 import { storage, auth } from '../../../../config/firebaseConfig';
@@ -98,6 +100,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
   const [changePwVisible, setChangePwVisible] = useState<boolean>(false);
   const [contactInfor, setContactInfor] = useState<boolean>(false);
+  const [updateHealth, setupdateHealth] = useState<boolean>(false);
+  const [lifeStyle, setlifeStyle] = useState<boolean>(false);
   const router = useRouter();
 
   // Use central hook which listens for auth state and loads the Firestore profile
@@ -166,9 +170,9 @@ const FirestoreMyProfileScreen: React.FC = () => {
       const blob = await response.blob();
 
       // Create a reference to the storage location
-  const fileExtension = uri.split('.').pop();
-  const fileName = `profile_${uid}_${Date.now()}.${fileExtension}`;
-  const storageRef = ref(storage, `profileImages/${fileName}`);
+      const fileExtension = uri.split('.').pop();
+      const fileName = `profile_${uid}_${Date.now()}.${fileExtension}`;
+      const storageRef = ref(storage, `profileImages/${fileName}`);
 
       // Upload the blob
       await uploadBytes(storageRef, blob);
@@ -327,11 +331,6 @@ const FirestoreMyProfileScreen: React.FC = () => {
     setEditModalVisible(false);
   };
 
-  // // Function to handle profile save from modal
-  // const handleSaveProfile = async (updatedData: Partial<UserData>) => {
-  //   await updateUserProfile(updatedData);
-  // };
-
   // Navigate to change password screen
   const handleChangePassword = () => {
     setChangePwVisible(true);
@@ -352,14 +351,23 @@ const FirestoreMyProfileScreen: React.FC = () => {
     setContactInfor(false);
   };
 
-  const handleUpdateHealthProfile = () => {
-    // Navigate to health profile screen
-    console.log('Update Health Profile pressed');
+  // Navigate to contact info screen
+  const handleupdateHealth = () => {
+    setupdateHealth(true);
   };
 
-  const handleLifeStyle = () => {
-    // Navigate to lifestyle screen
-    console.log('Life Style pressed');
+  // Function to handle modal close
+  const handleCloseupdateHealth = () => {
+    setupdateHealth(false);
+  };
+
+  // Navigate to contact info screen
+  const handleUpdateLifeStyle = () => {
+    setlifeStyle(true);
+  };
+
+  const handleCloseLifeStyle = () => {
+    setlifeStyle(false);
   };
 
   const handleHealthCompanion = () => {
@@ -472,14 +480,14 @@ const FirestoreMyProfileScreen: React.FC = () => {
             icon="medical-outline"
             iconColor="#8B5CF6"
             iconBackgroundColor="#F3E8FF"
-            onPress={handleUpdateHealthProfile}
+            onPress={handleupdateHealth}
           />
           <ProfileItem
             title="Life Style"
             icon="fitness-outline"
             iconColor="#A855F7"
             iconBackgroundColor="#EDE9FE"
-            onPress={handleLifeStyle}
+            onPress={handleUpdateLifeStyle}
           />
         </View>
 
@@ -506,22 +514,29 @@ const FirestoreMyProfileScreen: React.FC = () => {
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <EditProfileScreen
-        visible={editModalVisible}
-        userData={editUserData}
-        onClose={handleCloseEditModal}
-      />
+      {/* Render modal components defensively to avoid invalid element errors
+          that occur when an import resolves to a module object instead of the
+          component function (wrong default/named import). */}
+      {(() => {
+        // helper to resolve default vs named exports
+        const resolve = (C: any) => C && (typeof C === 'function' ? C : (C && C.default ? C.default : null));
 
-      <ChangePw
-        visible={changePwVisible}
-        onClose={handleClosechangePw}
-      />
+        const EditComp = resolve(EditProfileScreen);
+        const ChangeComp = resolve(ChangePw as any);
+        const ContactComp = resolve(ContactInforScreen);
+        const HealthComp = resolve(UpdateHealthScreen);
+        const LifeComp = resolve(LifeStyleScreen as any);
 
-      <ContactInforScreen
-        visible={contactInfor}
-        userData={editUserData}
-        onClose={handleCloseContactInformation}
-      />
+        return (
+          <>
+            {EditComp ? <EditComp visible={editModalVisible} userData={editUserData} onClose={handleCloseEditModal} /> : null}
+            {ChangeComp ? <ChangeComp visible={changePwVisible} onClose={handleClosechangePw} /> : null}
+            {ContactComp ? <ContactComp visible={contactInfor} userData={editUserData} onClose={handleCloseContactInformation} /> : null}
+            {HealthComp ? <HealthComp visible={updateHealth} userData={editUserData} onClose={handleCloseupdateHealth} /> : null}
+            {LifeComp ? <LifeComp visible={lifeStyle} userData={editUserData} onClose={handleCloseLifeStyle} /> : null}
+          </>
+        );
+      })()}
     </SafeAreaView>
   );
 };

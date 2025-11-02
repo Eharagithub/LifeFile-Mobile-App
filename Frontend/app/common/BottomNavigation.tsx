@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'MyProfile' | 'notification' | 'more' | 'none';
+  activeTab: 'home' | 'notification' | 'Chat' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -18,7 +18,7 @@ export default function BottomNavigation({
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
   // Only highlight tab if on these pages
-  const highlightTabs = ['home', 'MyProfile', 'notification', 'more'];
+  const highlightTabs = ['home', 'notification', 'Chat', 'more'];
   const shouldHighlight = highlightTabs.includes(activeTab);
 
   const handleTabPress = (tabName: string) => {
@@ -27,11 +27,12 @@ export default function BottomNavigation({
       case 'home':
         router.push('../../../patientProfile/patientHome');
         break;
-      case 'MyProfile':
-        router.push('../../../patientProfile/more/patientProfilee/MyProfile');
-        break;
+
       case 'notification':
         router.push('../../../patientProfile/notification');
+        break;
+      case 'ChatMyProfile':
+        router.push('../../../patientProfile/chat');
         break;
       case 'more':
         setIsDrawerVisible(true);
@@ -82,17 +83,17 @@ export default function BottomNavigation({
 
         <TouchableOpacity
           style={styles && styles.tabButton}
-          onPress={() => handleTabPress('MyProfile')}
+          onPress={() => handleTabPress('chat')}
         >
           <Feather
             name="message-circle"
             size={22}
-            color={shouldHighlight && activeTab === 'MyProfile' ? '#7d4c9e' : '#666'}
+            color={shouldHighlight && activeTab === 'Chat' ? '#7d4c9e' : '#666'}
           />
           <Text style={styles && [
             styles.tabLabel,
-            shouldHighlight && activeTab === 'MyProfile' && styles.activeTabLabel
-          ]}>My Profile</Text>
+            shouldHighlight && activeTab === 'Chat' && styles.activeTabLabel
+          ]}>Chat</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
