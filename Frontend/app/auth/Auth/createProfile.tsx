@@ -145,13 +145,20 @@ export default function CreateProfile() {
       return;
     }
 
-    const personalData = {
+        // Validate contact number (must be exactly 10 digits)
+        if (!/^[0-9]{10}$/.test(contact.trim())) {
+            Alert.alert('Error', 'Contact number must contain exactly 10 digits.');
+            setIsLoading(false);
+            return;
+        }
+
+        const personalData = {
       fullName,
       dateOfBirth: dob,
       nic,
       gender,
       address: address || '',
-      contactNumber: contact || '',
+            contactNumber: contact || '',
       profilePicture: profileImage || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

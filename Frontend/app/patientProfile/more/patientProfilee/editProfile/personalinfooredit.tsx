@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { Picker } from '@react-native-picker/picker';
 
 // Firebase imports
 import { db, auth } from '../../../../../config/firebaseConfig';
+import authService from '../../../../../services/authService';
 
 interface EditProfileProps {
   visible: boolean;
@@ -46,6 +47,8 @@ const EditProfileScreen: React.FC<EditProfileProps> = ({
   const [isDatePickerVisible, setDatePickerVisibility] = useState<boolean>(false);
   const [isGenderPickerVisible, setGenderPickerVisibility] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [role, setRole] = useState<'patient' | 'doctor'>('patient');
+  const initialPersonalRef = useRef<{ fullName?: string; dateOfBirth?: string; nic?: string; gender?: string } | null>(null);
 
   // Get current user ID from Firebase Auth
   const currentUser = auth.currentUser;
@@ -62,25 +65,66 @@ const EditProfileScreen: React.FC<EditProfileProps> = ({
         }
         try {
           setLoading(true);
-          const userDocRef = db.collection('users').doc(userId);
-          const doc = await userDocRef.get();
-          if (doc.exists) {
-            const data = doc.data();
-            // Access data from the 'personal' map field
-            setFullName(data?.personal?.fullName || '');
-            setDateOfBirth(data?.personal?.dateOfBirth || '');
-            setNic(data?.personal?.nic || '');
-            setGender(data?.personal?.gender || '');
+
+          // Use authService.getUserData which handles Patient/Doctor collection logic
+          const res = await authService.getUserData(userId);
+          if (res.success && res.data) {
+            const data = res.data;
+            const fetchedFullName = data?.personal?.fullName || '';
+            const fetchedDob = data?.personal?.dateOfBirth || '';
+            const fetchedNic = data?.personal?.nic || '';
+            const fetchedGender = data?.personal?.gender || '';
+
+            setFullName(fetchedFullName);
+            setDateOfBirth(fetchedDob);
+            setNic(fetchedNic);
+            setGender(fetchedGender);
+            // store initial values for diffing on submit
+            initialPersonalRef.current = { fullName: fetchedFullName, dateOfBirth: fetchedDob, nic: fetchedNic, gender: fetchedGender };
+
+            // remember role for writes
+            if (data.role === 'doctor') setRole('doctor');
+            else setRole('patient');
           } else {
-            // If user document doesn't exist, initialize with empty values
-            setFullName('');
-            setDateOfBirth('');
-            setNic('');
-            setGender('');
+            // Fallback: try the legacy 'users' collection if present
+            try {
+              const userDocRef = db.collection('users').doc(userId);
+              const doc = await userDocRef.get();
+                if (doc.exists) {
+                const data = doc.data();
+                const fetchedFullName = data?.personal?.fullName || '';
+                const fetchedDob = data?.personal?.dateOfBirth || '';
+                const fetchedNic = data?.personal?.nic || '';
+                const fetchedGender = data?.personal?.gender || '';
+                setFullName(fetchedFullName);
+                setDateOfBirth(fetchedDob);
+                setNic(fetchedNic);
+                setGender(fetchedGender);
+                initialPersonalRef.current = { fullName: fetchedFullName, dateOfBirth: fetchedDob, nic: fetchedNic, gender: fetchedGender };
+              } else {
+                setFullName('');
+                setDateOfBirth('');
+                setNic('');
+                setGender('');
+                initialPersonalRef.current = { fullName: '', dateOfBirth: '', nic: '', gender: '' };
+              }
+            } catch (legacyErr) {
+              console.warn('Fallback read from users collection failed:', legacyErr);
+              setFullName('');
+              setDateOfBirth('');
+              setNic('');
+              setGender('');
+              initialPersonalRef.current = { fullName: '', dateOfBirth: '', nic: '', gender: '' };
+            }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error fetching personal data:", error);
-          Alert.alert("Error", "Failed to load personal data.");
+          // Surface permission-specific message for easier debugging
+          if (error && (error.code === 'permission-denied' || error.message?.includes('permission'))) {
+            Alert.alert('Error', 'Missing or insufficient permissions when reading profile. Please check Firestore rules.');
+          } else {
+            Alert.alert('Error', 'Failed to load personal data.');
+          }
         } finally {
           setLoading(false);
         }
@@ -137,35 +181,46 @@ const EditProfileScreen: React.FC<EditProfileProps> = ({
       return;
     }
 
-    // Basic validation
-    if (!fullName.trim()) {
-      Alert.alert('Error', 'Please enter your full name.');
+    // Build partial update by including only fields that changed compared to initial values.
+    const partialUpdate: any = {};
+    const initial = initialPersonalRef.current || {};
+
+    if (fullName.trim() !== (initial.fullName || '')) partialUpdate.fullName = fullName.trim();
+    if (dateOfBirth !== (initial.dateOfBirth || '')) partialUpdate.dateOfBirth = dateOfBirth;
+    if (nic.trim() !== (initial.nic || '')) partialUpdate.nic = nic.trim();
+    if (gender !== (initial.gender || '')) partialUpdate.gender = gender;
+
+    if (Object.keys(partialUpdate).length === 0) {
+      Alert.alert('No changes', 'No changes detected to save.');
       return;
     }
 
     try {
       setLoading(true);
 
-      // Prepare updated data for the 'personal' map field
-      const updatedPersonalData = {
-        fullName: fullName.trim(),
-        dateOfBirth: dateOfBirth,
-        nic: nic.trim(),
-        gender: gender,
-        updatedAt: new Date(), // Update timestamp
-      };
-
-      // Update the 'personal' map field within the user document
-      const userDocRef = db.collection('users').doc(userId);
-      await userDocRef.update({ personal: updatedPersonalData });
-
+      // Use centralized authService to handle partial writes to Patient/Doctor collections
+      const res = await authService.updatePersonalFields(userId, partialUpdate as any, role);
       setLoading(false);
-      Alert.alert('Success', 'Profile updated successfully!');
-      onClose(); // Close the modal after successful update
-    } catch (error) {
+      if (res.success) {
+        Alert.alert('Success', 'Profile updated successfully!');
+        onClose(); // Close the modal after successful update
+      } else {
+        console.error('Error updating profile:', res.error);
+        // Surface permission-specific message when available
+        if (res.error && res.error.toLowerCase().includes('permission')) {
+          Alert.alert('Error', 'Missing or insufficient permissions when updating profile. Please check Firestore rules.');
+        } else {
+          Alert.alert('Error', res.error || 'Failed to update profile. Please try again.');
+        }
+      }
+    } catch (error: any) {
       setLoading(false);
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      if (error && (error.code === 'permission-denied' || error.message?.includes('permission'))) {
+        Alert.alert('Error', 'Missing or insufficient permissions when updating profile. Please check Firestore rules.');
+      } else {
+        Alert.alert('Error', 'Failed to update profile. Please try again.');
+      }
     }
   };
 

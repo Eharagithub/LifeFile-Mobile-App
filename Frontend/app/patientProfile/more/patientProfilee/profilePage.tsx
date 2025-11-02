@@ -14,8 +14,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './profilePage.styles'; 
 import BottomNavigation from '../../../common/BottomNavigation';
+import useUserProfile from '../../../../hooks/useUserProfile';
 import { auth } from '../../../../config/firebaseConfig';
-import AuthService from '../../../../services/authService';
 
 interface ProfileStats {
   age: string;
@@ -47,6 +47,8 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string>('https://images.unsplash.com/photo-1494790108755-2616b9e9d1e4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80');
+
+  const { data, loading, error: hookError, refresh } = useUserProfile();
 
   // Function to calculate age from birth date, wrapped in useCallback to maintain reference stability
   const calculateAge = useCallback((birthdate: Date | string | null): string => {
@@ -102,77 +104,35 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
   }, []);
 
   // Define fetchUserData with useCallback to avoid recreating on each render
-  const fetchUserData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Get current user from Firebase Auth
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        console.log('No user is signed in');
-        setError('Please sign in to view your profile');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get user data from Firestore
-      const result = await AuthService.getUserData(currentUser.uid);
-      
-      if (result.success && result.data) {
-        const userData = result.data;
-        
-        // Update user profile name
-        if (userData.personal?.fullName) {
-          setUserName(userData.personal.fullName);
-        }
-        
-        // Update profile picture if available
-        if (userData.personal?.profilePicture) {
-          setProfileImage(userData.personal.profilePicture);
-        }
-        
-        // Calculate age from date of birth
-        let age = '...';
-        if (userData.personal?.dateOfBirth) {
-         // console.log('Date of birth from Firestore:', userData.personal.dateOfBirth, 'Type:', typeof userData.personal.dateOfBirth);
-          
-          // Pass the raw dateOfBirth to calculateAge - it will handle parsing
-          age = calculateAge(userData.personal.dateOfBirth);
-          
-         }
-        // Update profile stats
-        setProfileStats({
-          age: age,
-          bloodGroup: userData.health?.bloodType || 'N/A',
-          BMI: userData.health?.bmi || 
-               (userData.health?.weight && userData.health?.height ? 
-               `${userData.health.weight}kg` : 'N/A'),
-        });
-      } else {
-        console.error('Failed to fetch user data:', result.error);
-        setError('Failed to load profile data. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [calculateAge]); // Add calculateAge as dependency
-
-  // Effect to fetch data when component mounts
+  // Update UI when hook data changes
   useEffect(() => {
-    // Initial data fetch
-    fetchUserData();
-  }, [fetchUserData]); // Only depend on fetchUserData
+    setIsLoading(loading);
+    if (hookError) setError(hookError);
+    if (!loading && data) {
+      const userData = data as any;
+      // name
+      const full = userData.personal?.fullName || userData.fullName || '';
+      setUserName(full || (userData.email ? userData.email.split('@')[0] : 'User'));
+      // profile image
+  setProfileImage((prev) => userData.personal?.profilePicture || userData.profilePicture || prev);
+      // age
+      const age = userData.personal?.dateOfBirth ? calculateAge(userData.personal.dateOfBirth) : 'N/A';
+      setProfileStats({
+        age: age,
+        bloodGroup: userData.health?.bloodType || 'N/A',
+        BMI: userData.health?.bmi || (userData.health?.weight && userData.health?.height ? `${userData.health.weight}kg` : 'N/A')
+      });
+    }
+  }, [loading, data, hookError, calculateAge]);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchUserData()
-      .finally(() => setRefreshing(false));
-  }, [fetchUserData]);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
 
   const menuItems: MenuItem[] = [
     {
@@ -225,14 +185,14 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
       onPress: () => {
         // Handle logout logic
         auth.signOut()
-          .then(() => {
-            console.log('User logged out successfully');
-            // Navigate to login screen
-            router.replace('/auth/login');
-          })
-          .catch((error) => {
-            console.error('Error signing out:', error);
-          });
+            .then(() => {
+              console.log('User logged out successfully');
+              // Navigate to login screen
+              router.replace('/auth/login');
+            })
+            .catch((err: any) => {
+              console.error('Error signing out:', err);
+            });
       },
     },
   ];
@@ -306,7 +266,7 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
               paddingVertical: 10,
               borderRadius: 5
             }}
-            onPress={fetchUserData}
+            onPress={async () => { await refresh(); }}
           >
             <Text style={{ color: 'white' }}>Try Again</Text>
           </TouchableOpacity>

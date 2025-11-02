@@ -29,6 +29,7 @@ import {
   getDownloadURL,
   deleteObject
 } from 'firebase/storage';
+import useUserProfile from '../../../../hooks/useUserProfile';
 
 interface UserData {
   fullName: string;
@@ -93,101 +94,54 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ title }) => {
 };
 
 const FirestoreMyProfileScreen: React.FC = () => {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
   const [changePwVisible, setChangePwVisible] = useState<boolean>(false);
   const [contactInfor, setContactInfor] = useState<boolean>(false);
   const router = useRouter();
 
-  // Get current user ID from Firebase Auth
-  const currentUser = auth.currentUser;
-  const userId = currentUser ? currentUser.uid : null;
+  // Use central hook which listens for auth state and loads the Firestore profile
+  const { uid, data, loading, refresh } = useUserProfile();
 
-  // Function to fetch user data from Firestore
-  const fetchUserData = React.useCallback(async () => {
-    if (!userId) {
-      console.error("No user is signed in");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Determine role and fetch the correct document
-      const roles = await AuthService.determineRoles(userId!);
-      if (roles.error === 'permission-denied') {
-        console.error('Permission denied when fetching role information');
-        Alert.alert('Error', 'Missing permissions to read your profile. Please contact support.');
-        setLoading(false);
-        return;
-      }
-
-      // Prefer patient role for this screen
-      let roleToUse: 'patient' | 'doctor' | null = null;
-      if (roles.isPatient) roleToUse = 'patient';
-      else if (roles.isDoctor) roleToUse = 'doctor';
-
-      if (!roleToUse) {
-        // If no specific profile exists, fallback to creating a minimal Patient document
-        Alert.alert('No profile', 'No patient or doctor profile found for this account.');
-        setLoading(false);
-        return;
-      }
-
-      const result = await AuthService.getUserData(userId!, roleToUse);
-      if (result.success && result.data) {
-        const data = result.data as any;
-        setUserData({
-          fullName: data.personal?.fullName || currentUser?.displayName || 'User',
-          email: data.email || currentUser?.email || '',
-          profilePicture: data.personal?.profilePicture || currentUser?.photoURL || ''
-        });
-      } else {
-        console.error('Error fetching user data:', result.error);
-        Alert.alert('Error', 'Failed to load profile data. Please try again.');
-      }
-    } catch (error: any) {
-      console.error('Error fetching user data:', error?.message || error);
-      Alert.alert('Error', 'Failed to load user data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, currentUser, setLoading, setUserData]);
-
-  useEffect(() => {
-    // Fetch user data from Firestore when component mounts
-    fetchUserData();
-  }, [userId, fetchUserData]);
+  // derived small profile for UI and child components
+  const userProfile = {
+    fullName: data?.personal?.fullName || auth.currentUser?.displayName || data?.fullName || 'User',
+    email: data?.email || auth.currentUser?.email || '',
+    profilePicture: data?.personal?.profilePicture || auth.currentUser?.photoURL || '',
+  };
+  const editUserData = {
+    fullName: data?.personal?.fullName || '',
+    dateOfBirth: data?.personal?.dateOfBirth || '',
+    nic: data?.personal?.nic || '',
+    gender: data?.personal?.gender || '',
+    email: data?.email || auth.currentUser?.email || '',
+    weight: data?.personal?.weight || '',
+    height: data?.personal?.height || '',
+    bmi: data?.personal?.bmi || '',
+  };
 
   const updateUserProfile = async (updatedData: Partial<UserData>) => {
-    if (!userId) {
-      Alert.alert("Error", "You must be logged in to update your profile.");
+    if (!uid) {
+      Alert.alert('Error', 'You must be logged in to update your profile.');
       return;
     }
 
     try {
-      // Determine role and update the appropriate collection
-      const roles = await AuthService.determineRoles(userId!);
+      const roles = await AuthService.determineRoles(uid);
       if (roles.error === 'permission-denied') {
         Alert.alert('Error', 'Missing permissions to update your profile. Please contact support.');
         return;
       }
 
-      let roleToUse: 'patient' | 'doctor' | null = null;
-      if (roles.isPatient) roleToUse = 'patient';
-      else if (roles.isDoctor) roleToUse = 'doctor';
-
+      const roleToUse: 'patient' | 'doctor' | null = roles.isPatient ? 'patient' : roles.isDoctor ? 'doctor' : null;
       if (!roleToUse) {
         Alert.alert('Error', 'No profile exists to update for this account.');
         return;
       }
 
-      const res = await AuthService.updateUserProfile(userId!, { personal: updatedData as any }, roleToUse);
+      const res = await AuthService.updateUserProfile(uid, { personal: updatedData as any }, roleToUse);
       if (res.success) {
-        setUserData(prev => prev ? { ...prev, ...updatedData } : null);
+        await refresh();
         Alert.alert('Success', 'Profile updated successfully!');
       } else {
         console.error('Error updating profile:', res.error);
@@ -200,8 +154,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
   };
 
   const uploadProfileImage = async (uri: string): Promise<string> => {
-    if (!userId) {
-      throw new Error("User not authenticated");
+    if (!uid) {
+      throw new Error('User not authenticated');
     }
 
     try {
@@ -212,9 +166,9 @@ const FirestoreMyProfileScreen: React.FC = () => {
       const blob = await response.blob();
 
       // Create a reference to the storage location
-      const fileExtension = uri.split('.').pop();
-      const fileName = `profile_${userId}_${Date.now()}.${fileExtension}`;
-      const storageRef = ref(storage, `profileImages/${fileName}`);
+  const fileExtension = uri.split('.').pop();
+  const fileName = `profile_${uid}_${Date.now()}.${fileExtension}`;
+  const storageRef = ref(storage, `profileImages/${fileName}`);
 
       // Upload the blob
       await uploadBytes(storageRef, blob);
@@ -295,8 +249,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
           const downloadURL = await uploadProfileImage(imageUri);
 
           // Delete old profile image if exists
-          if (userData?.profilePicture) {
-            await deleteOldProfileImage(userData.profilePicture);
+          if (data?.personal?.profilePicture) {
+            await deleteOldProfileImage(data.personal.profilePicture);
           }
 
           // Update Firestore with new profile image URL
@@ -333,8 +287,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
           const downloadURL = await uploadProfileImage(imageUri);
 
           // Delete old profile image if exists
-          if (userData?.profilePicture) {
-            await deleteOldProfileImage(userData.profilePicture);
+          if (data?.personal?.profilePicture) {
+            await deleteOldProfileImage(data.personal.profilePicture);
           }
 
           // Update Firestore with new profile image URL
@@ -351,9 +305,10 @@ const FirestoreMyProfileScreen: React.FC = () => {
   };
 
   const removePhoto = async () => {
-    if (userData?.profilePicture) {
+    const existing = data?.personal?.profilePicture || userProfile.profilePicture;
+    if (existing) {
       try {
-        await deleteOldProfileImage(userData.profilePicture);
+        await deleteOldProfileImage(existing);
         await updateUserProfile({ profilePicture: '' });
       } catch (error: any) {
         console.error('Failed to remove profile picture:', error?.message || error);
@@ -458,8 +413,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
             >
               {uploading ? (
                 <ActivityIndicator size="large" color="#ffffff" />
-              ) : userData?.profilePicture ? (
-                <Image source={{ uri: userData.profilePicture }} style={styles.profileImage} />
+              ) : userProfile.profilePicture ? (
+                <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Ionicons name="person" size={40} color="#ffffff" />
@@ -471,8 +426,8 @@ const FirestoreMyProfileScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.userName}>{userData?.fullName || 'User'}</Text>
-          <Text style={styles.userEmail}>{userData?.email || 'No email provided'}</Text>
+          <Text style={styles.userName}>{userProfile.fullName || 'User'}</Text>
+          <Text style={styles.userEmail}>{userProfile.email || 'No email provided'}</Text>
 
 
 
@@ -553,7 +508,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
       {/* Edit Profile Modal */}
       <EditProfileScreen
         visible={editModalVisible}
-        userData={userData}
+        userData={editUserData}
         onClose={handleCloseEditModal}
       />
 
@@ -564,7 +519,7 @@ const FirestoreMyProfileScreen: React.FC = () => {
 
       <ContactInforScreen
         visible={contactInfor}
-        userData={userData}
+        userData={editUserData}
         onClose={handleCloseContactInformation}
       />
     </SafeAreaView>

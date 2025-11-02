@@ -243,76 +243,54 @@ export default function PatientHome() {
     router.push('./labReports/labresults ');
   };
 
-  // Fetch user profile data
+  // Fetch user profile data: listen for auth state and load patient name when available
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    let mounted = true;
+
+    const loadProfileForUid = async (uid: string) => {
       try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log("No user is signed in");
-          router.replace('../login');
-          return;
-        }
-
-        const userId = currentUser.uid;
-        // Determine role and fetch from the correct collection
-        const roles = await AuthService.determineRoles(userId);
-
+        console.debug('[patientHome] loadProfileForUid uid=', uid);
+        const roles = await AuthService.determineRoles(uid);
+        console.debug('[patientHome] determineRoles =>', roles);
         if (roles.error === 'permission-denied') {
-          console.error('Permission denied when fetching role information');
-          // fallback to guest
-          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
+          console.warn('Permission denied when checking roles for uid=', uid);
           return;
         }
 
-        // Prefer patient data if available (this is the patient home)
-        let roleToUse: 'patient' | 'doctor' | null = null;
-        if (roles.isPatient) roleToUse = 'patient';
-        else if (roles.isDoctor) roleToUse = 'doctor';
+        const roleToUse: 'patient' | 'doctor' | null = roles.isPatient ? 'patient' : roles.isDoctor ? 'doctor' : null;
+        if (!roleToUse) return;
 
-        if (!roleToUse) {
-          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
-          return;
-        }
-
-        const userResult = await AuthService.getUserData(userId, roleToUse);
-        if (userResult.success && userResult.data) {
-          const personalData = userResult.data.personal || {} as any;
-          const fullName = personalData.fullName || 'Guest';
-          const nameParts = fullName.trim().split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-
-          setUserProfile({
-            fullName,
-            firstName,
-            lastName,
-            profilePicture: personalData.profilePicture || ''
-          });
+        const res = await AuthService.getUserData(uid, roleToUse);
+        console.debug('[patientHome] getUserData result:', res);
+        if (res.success && res.data) {
+          const data = res.data as any;
+          const personal = data.personal || {} as any;
+          // fallback chain for fullName: personal.fullName -> data.fullName -> auth.displayName -> email local-part
+          let fullName = personal.fullName || data.fullName || '';
+          if (!fullName && auth.currentUser?.displayName) fullName = auth.currentUser.displayName;
+          if (!fullName && data.email) fullName = (data.email.split('@')[0] || '');
+          const firstName = fullName.trim().split(' ')[0] || '';
+          if (mounted) {
+            setUserProfile(prev => ({ ...prev, fullName, firstName, profilePicture: personal.profilePicture || data.profilePicture || '' }));
+          }
         } else {
-          console.error('Error fetching user data:', userResult.error);
-          setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
+          console.warn('getUserData failed for uid=', uid, res.error);
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setUserProfile({
-          fullName: 'Guest User',
-          firstName: 'Guest',
-          lastName: 'User',
-          profilePicture: ''
-        });
+      } catch (err) {
+        console.error('Error loading user profile for uid=', uid, err);
       }
     };
 
-    fetchUserProfile();
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchUserProfile();
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user && user.uid) {
+        loadProfileForUid(user.uid);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, [router]);
 
   // Enhanced news item renderer with priority indicators

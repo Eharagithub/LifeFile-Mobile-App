@@ -72,6 +72,12 @@ class AuthService {
     return input.trim().replace(/[<>]/g, '');
   }
 
+  // Contact number validation: exactly 10 numeric digits
+  private isValidContactNumber(input: string): boolean {
+    if (!input) return false;
+    return /^\d{10}$/.test(input.trim());
+  }
+
   // Create user account
   async createUserAccount(email: string, password: string, confirmPassword: string, role: 'patient' | 'doctor'): Promise<{ success: boolean; uid?: string; error?: string }> {
     try {
@@ -284,15 +290,98 @@ class AuthService {
         return { success: false, error: 'Please fill in all required fields' };
       }
 
-      // Update user document
-      await userRef.set({
-        personal: sanitizedData
-      }, { merge: true });
+      // Validate contact number if provided
+      if (sanitizedData.contactNumber && !this.isValidContactNumber(sanitizedData.contactNumber)) {
+        return { success: false, error: 'Contact number must be exactly 10 digits' };
+      }
+
+      // Read existing personal data and merge with sanitizedData so we don't accidentally
+      // remove other subfields when partial updates are submitted.
+      const existingDoc = await userRef.get();
+      let existingPersonal: any = {};
+      if (existingDoc.exists) {
+        existingPersonal = existingDoc.data()?.personal || {};
+      }
+
+      const mergedPersonal = {
+        ...existingPersonal,
+        ...sanitizedData,
+        updatedAt: sanitizedData.updatedAt // ensure updatedAt is the sanitized timestamp
+      };
+
+      // Flatten mergedPersonal into dot-path update keys to update only the provided subfields.
+      const updatesToApply: any = {};
+      Object.keys(mergedPersonal).forEach(key => {
+        const val = (mergedPersonal as any)[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          Object.keys(val).forEach(subKey => {
+            updatesToApply[`personal.${key}.${subKey}`] = val[subKey];
+          });
+        } else {
+          updatesToApply[`personal.${key}`] = val;
+        }
+      });
+
+      // Apply update using dot-paths
+      await userRef.update(updatesToApply);
 
       return { success: true };
     } catch (error: any) {
       console.error('Error saving personal information:', error);
       return { success: false, error: 'Failed to save personal information' };
+    }
+  }
+
+  // Update only provided personal fields without requiring all required fields.
+  // This is intended for partial edits where the caller only wants to change a subset
+  // of the `personal` map (eg. only fullName or only contactNumber).
+  async updatePersonalFields(uid: string, partialPersonal: Partial<UserData['personal']>, role: 'patient' | 'doctor'): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!uid || !partialPersonal || Object.keys(partialPersonal).length === 0) {
+        return { success: false, error: 'Invalid data provided' };
+      }
+
+      const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
+      const userRef = db.collection(collectionName).doc(uid);
+
+      // Sanitize only provided fields
+      const sanitizedPartial: any = {};
+      if (typeof partialPersonal.fullName !== 'undefined') sanitizedPartial.fullName = this.sanitizeInput(String(partialPersonal.fullName || ''));
+      if (typeof partialPersonal.dateOfBirth !== 'undefined') sanitizedPartial.dateOfBirth = String(partialPersonal.dateOfBirth || '');
+      if (typeof partialPersonal.nic !== 'undefined') sanitizedPartial.nic = this.sanitizeInput(String(partialPersonal.nic || ''));
+      if (typeof partialPersonal.gender !== 'undefined') sanitizedPartial.gender = this.sanitizeInput(String(partialPersonal.gender || ''));
+      if (typeof partialPersonal.address !== 'undefined') sanitizedPartial.address = partialPersonal.address ? this.sanitizeInput(String(partialPersonal.address)) : '';
+      if (typeof partialPersonal.contactNumber !== 'undefined') {
+        const val = partialPersonal.contactNumber ? this.sanitizeInput(String(partialPersonal.contactNumber)) : '';
+        if (val && !this.isValidContactNumber(val)) return { success: false, error: 'Contact number must be exactly 10 digits' };
+        sanitizedPartial.contactNumber = val;
+      }
+      if (typeof partialPersonal.profilePicture !== 'undefined') sanitizedPartial.profilePicture = String(partialPersonal.profilePicture || '');
+
+      // ensure an updatedAt timestamp
+      sanitizedPartial.updatedAt = new Date().toISOString();
+
+  // Only update the provided keys (plus updatedAt). Use dot-paths to avoid replacing the whole map.
+      const updatesToApply: any = {};
+      Object.keys(sanitizedPartial).forEach(key => {
+        const val = sanitizedPartial[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          Object.keys(val).forEach(subKey => {
+            updatesToApply[`personal.${key}.${subKey}`] = val[subKey];
+          });
+        } else {
+          updatesToApply[`personal.${key}`] = val;
+        }
+      });
+      // also ensure updatedAt is set
+      updatesToApply['personal.updatedAt'] = sanitizedPartial.updatedAt;
+
+      await userRef.update(updatesToApply);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating personal fields:', error);
+      return { success: false, error: 'Failed to update personal fields' };
     }
   }
 
@@ -370,10 +459,25 @@ class AuthService {
       }
 
       // Sanitize inputs
+      const sanitizedWeight = this.sanitizeInput(healthData.weight);
+      const sanitizedHeight = this.sanitizeInput(healthData.height);
+
+      // Compute BMI server-side (height expected in cm). Always override any client-provided bmi.
+      let computedBmi = '';
+      try {
+        const w = parseFloat(sanitizedWeight);
+        const hMeters = parseFloat(sanitizedHeight) / 100;
+        if (!isNaN(w) && !isNaN(hMeters) && hMeters > 0) {
+          computedBmi = (w / (hMeters * hMeters)).toFixed(1);
+        }
+      } catch {
+        computedBmi = '';
+      }
+
       const sanitizedData = {
-        ...healthData,
-        weight: this.sanitizeInput(healthData.weight),
-        height: this.sanitizeInput(healthData.height),
+        weight: sanitizedWeight,
+        height: sanitizedHeight,
+        bmi: computedBmi,
         bloodType: healthData.bloodType ? this.sanitizeInput(healthData.bloodType) : '',
         allergies: healthData.allergies ? this.sanitizeInput(healthData.allergies) : '',
         chronicDiseases: healthData.chronicDiseases ? this.sanitizeInput(healthData.chronicDiseases) : '',
@@ -421,24 +525,73 @@ class AuthService {
       const sanitizedUpdates: any = {};
 
       if (updates.personal) {
-        sanitizedUpdates.personal = {
-          ...updates.personal,
-          fullName: updates.personal.fullName ? this.sanitizeInput(updates.personal.fullName) : undefined,
-          address: updates.personal.address ? this.sanitizeInput(updates.personal.address) : undefined,
-          contactNumber: updates.personal.contactNumber ? this.sanitizeInput(updates.personal.contactNumber) : undefined,
-          updatedAt: new Date().toISOString()
-        };
+        const personal: any = {};
+        // Only include fields that are provided to avoid writing undefined
+        if (typeof updates.personal.fullName !== 'undefined') {
+          personal.fullName = updates.personal.fullName ? this.sanitizeInput(updates.personal.fullName) : '';
+        }
+        if (typeof updates.personal.dateOfBirth !== 'undefined') {
+          personal.dateOfBirth = updates.personal.dateOfBirth || '';
+        }
+        if (typeof updates.personal.nic !== 'undefined') {
+          personal.nic = updates.personal.nic ? this.sanitizeInput(updates.personal.nic) : '';
+        }
+        if (typeof updates.personal.gender !== 'undefined') {
+          personal.gender = updates.personal.gender ? this.sanitizeInput(updates.personal.gender) : '';
+        }
+        if (typeof updates.personal.address !== 'undefined') {
+          personal.address = updates.personal.address ? this.sanitizeInput(updates.personal.address) : '';
+        }
+          if (typeof updates.personal.contactNumber !== 'undefined') {
+            const val = updates.personal.contactNumber ? this.sanitizeInput(updates.personal.contactNumber) : '';
+            // Validate contact number format (must be 10 digits) when provided
+            if (val && !this.isValidContactNumber(val)) {
+              return { success: false, error: 'Contact number must be exactly 10 digits' };
+            }
+            personal.contactNumber = val;
+          }
+        // always set updatedAt for personal updates
+        personal.updatedAt = new Date().toISOString();
+        sanitizedUpdates.personal = personal;
       }
 
       if (updates.health) {
-        sanitizedUpdates.health = {
-          ...updates.health,
-          updatedAt: new Date().toISOString()
-        };
+        const health: any = { ...updates.health };
+        health.updatedAt = new Date().toISOString();
+        sanitizedUpdates.health = health;
       }
 
-      // Update document
-      await db.collection(role === 'patient' ? 'Patient' : 'Doctor').doc(uid).update(sanitizedUpdates);
+      // Prepare update object for Firestore. When updating nested maps like `personal` or `health`,
+      // use dot-path keys so only the provided subfields are updated instead of replacing the entire map.
+      const updatesToApply: any = {};
+
+      if (sanitizedUpdates.personal) {
+        Object.keys(sanitizedUpdates.personal).forEach(key => {
+          updatesToApply[`personal.${key}`] = (sanitizedUpdates.personal as any)[key];
+        });
+      }
+
+      if (sanitizedUpdates.health) {
+        // flatten one level for health map; if there are nested objects (like lifestyle),
+        // flatten their fields as health.<field>.<subfield>
+        Object.keys(sanitizedUpdates.health).forEach(key => {
+          const val = (sanitizedUpdates.health as any)[key];
+          if (val && typeof val === 'object' && !Array.isArray(val)) {
+            Object.keys(val).forEach(subKey => {
+              updatesToApply[`health.${key}.${subKey}`] = val[subKey];
+            });
+          } else {
+            updatesToApply[`health.${key}`] = val;
+          }
+        });
+      }
+
+      // If nothing was flattened (edge-case), fall back to updating sanitizedUpdates directly.
+      if (Object.keys(updatesToApply).length === 0) {
+        await db.collection(role === 'patient' ? 'Patient' : 'Doctor').doc(uid).update(sanitizedUpdates);
+      } else {
+        await db.collection(role === 'patient' ? 'Patient' : 'Doctor').doc(uid).update(updatesToApply);
+      }
 
       return { success: true };
     } catch (error: any) {
@@ -451,27 +604,35 @@ class AuthService {
   async getUserData(uid: string, role?: 'patient' | 'doctor'): Promise<{ success: boolean; data?: UserData; error?: string }> {
     try {
       if (!uid) {
+        console.warn('getUserData called without uid');
         return { success: false, error: 'User ID is required' };
       }
+
+      console.debug(`getUserData: uid=${uid} role=${role || 'auto'}`);
 
       // If caller provides a role, read directly from that collection
       if (role) {
         const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
-        const userDoc = await db.collection(collectionName).doc(uid).get();
-        if (!userDoc.exists) return { success: false, error: 'User not found' };
-        const userData = userDoc.data() as UserData;
-        return { success: true, data: userData };
+        try {
+          const userDoc = await db.collection(collectionName).doc(uid).get();
+          if (!userDoc.exists) return { success: false, error: 'User not found' };
+          const userData = userDoc.data() as UserData;
+          return { success: true, data: userData };
+        } catch (err: any) {
+          console.error(`Error reading ${collectionName}/${uid}:`, err);
+          return { success: false, error: err.code || String(err) };
+        }
       }
 
       // No role provided: try Patient first, then Doctor
       try {
         const patientDoc = await db.collection('Patient').doc(uid).get();
         if (patientDoc.exists) {
+          console.debug('getUserData: found in Patient collection');
           return { success: true, data: patientDoc.data() as UserData };
         }
       } catch (err: any) {
-        // If permission denied on Patient read, log and continue to try Doctor
-        if (err.code === 'permission-denied') {
+        if (err && (err.code === 'permission-denied' || err.code === 'auth/insufficient-permission')) {
           console.warn('Permission denied reading Patient collection, will try Doctor collection', err);
         } else {
           console.error('Error reading Patient document:', err);
@@ -481,14 +642,16 @@ class AuthService {
       try {
         const doctorDoc = await db.collection('Doctor').doc(uid).get();
         if (doctorDoc.exists) {
+          console.debug('getUserData: found in Doctor collection');
           return { success: true, data: doctorDoc.data() as UserData };
         }
       } catch (err: any) {
-        if (err.code === 'permission-denied') {
+        if (err && (err.code === 'permission-denied' || err.code === 'auth/insufficient-permission')) {
           console.error('Permission denied reading Doctor collection:', err);
-          return { success: false, error: 'Missing or insufficient permissions to read user profile (permission-denied)' };
+          return { success: false, error: 'permission-denied' };
         }
         console.error('Error reading Doctor document:', err);
+        return { success: false, error: err.code || String(err) };
       }
 
       return { success: false, error: 'User not found in Patient or Doctor collections' };

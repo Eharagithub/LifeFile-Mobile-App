@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
   Dimensions,
   StyleSheet
 } from 'react-native';
@@ -16,6 +17,7 @@ import { Feather, } from '@expo/vector-icons';
 
 // Firebase imports
 import { db, auth } from '../../../../../config/firebaseConfig';
+import authService from '../../../../../services/authService';
 
 interface ContactInforProps {
   visible: boolean;
@@ -35,6 +37,7 @@ const ContactInforScreen: React.FC<ContactInforProps> = ({
   const [email, setEmail] = useState<string>('');
   const [contactNumber, setcontactNumber] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [role, setRole] = useState<'patient' | 'doctor'>('patient');
 
   // Get current user ID from Firebase Auth
   const currentUser = auth.currentUser;
@@ -50,23 +53,45 @@ const ContactInforScreen: React.FC<ContactInforProps> = ({
         }
         try {
           setLoading(true);
-          const userDocRef = db.collection('users').doc(userId);
-          const doc = await userDocRef.get();
-          if (doc.exists) {
-            const data = doc.data();
-            // Assuming email is stored directly in the user document or derived from auth.currentUser
-            // Assuming contactNumber is nested under 'personal' as per the Firestore screenshot
+          // Use centralized service to get user data (handles Patient/Doctor collections and permissions)
+          const res = await authService.getUserData(userId);
+          if (res.success && res.data) {
+            const data = res.data;
             setEmail(currentUser?.email || data?.email || '');
             setcontactNumber(data?.personal?.contactNumber || '');
+            if (data.role === 'doctor') setRole('doctor');
+            else setRole('patient');
           } else {
-            console.log("No such document!");
-            setEmail(currentUser?.email || '');
-            setcontactNumber('');
+            // Fallback to legacy users collection if necessary
+            try {
+              const userDocRef = db.collection('users').doc(userId);
+              const doc = await userDocRef.get();
+              if (doc.exists) {
+                const data = doc.data();
+                setEmail(currentUser?.email || data?.email || '');
+                setcontactNumber(data?.personal?.contactNumber || '');
+                // no role info in legacy users collection; default to patient
+                setRole('patient');
+              } else {
+                setEmail(currentUser?.email || '');
+                setcontactNumber('');
+                setRole('patient');
+              }
+            } catch (legacyErr) {
+              console.warn('Fallback read from users collection failed:', legacyErr);
+              setEmail(currentUser?.email || '');
+              setcontactNumber('');
+              setRole('patient');
+            }
           }
         }
-        catch (error) {
+        catch (error: any) {
           console.error("Error fetching personal data:", error);
-          Alert.alert("Error", "Failed to load personal data.");
+          if (error && (error.code === 'permission-denied' || error.message?.includes('permission'))) {
+            Alert.alert('Error', 'Missing or insufficient permissions when reading contact information. Please check Firestore rules.');
+          } else {
+            Alert.alert("Error", "Failed to load personal data.");
+          }
         } finally {
           setLoading(false);
         }
@@ -80,6 +105,46 @@ const ContactInforScreen: React.FC<ContactInforProps> = ({
   const handleCancel = () => {
     // Reset form and close modal - re-fetch data to ensure latest state
     onClose();
+  };
+
+  const handleSave = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'You must be logged in to update your contact information.');
+      return;
+    }
+
+    // Validate contact number: must be exactly 10 numeric digits
+    const sanitized = contactNumber.trim();
+    if (!/^[0-9]{10}$/.test(sanitized)) {
+      Alert.alert('Error', 'Contact number must contain exactly 10 digits.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Use updateUserProfile to apply a partial update without requiring full personal fields
+  const res = await authService.updateUserProfile(userId, { personal: { contactNumber: sanitized } } as any, role);
+      setLoading(false);
+      if (res.success) {
+        Alert.alert('Success', 'Contact information updated successfully.');
+        onClose();
+      } else {
+        console.error('Error updating contact info:', res.error);
+        if (res.error && res.error.toLowerCase().includes('permission')) {
+          Alert.alert('Error', 'Missing or insufficient permissions when updating contact information. Please check Firestore rules.');
+        } else {
+          Alert.alert('Error', res.error || 'Failed to update contact information.');
+        }
+      }
+    } catch (error: any) {
+      setLoading(false);
+      console.error('Error updating contact info:', error);
+      if (error && (error.code === 'permission-denied' || error.message?.includes('permission'))) {
+        Alert.alert('Error', 'Missing or insufficient permissions when updating contact information. Please check Firestore rules.');
+      } else {
+        Alert.alert('Error', 'Failed to update contact information.');
+      }
+    }
   };
 
   return (
@@ -129,10 +194,23 @@ const ContactInforScreen: React.FC<ContactInforProps> = ({
                 <TextInput
                   style={styles.textInput}
                   value={contactNumber}
-                  editable={false} // Make contact read-only
-                  pointerEvents="none" // Prevent interaction
+                  onChangeText={setcontactNumber}
+                  editable={!loading}
                 />
               </View>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSave}
+                disabled={loading}
+                activeOpacity={0.7}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
 
             </ScrollView>
           </View>
@@ -213,6 +291,21 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     backgroundColor: '#FFFFFF',
     height: 48,
+  },
+  submitButton: {
+    flex: 1,
+    height: 38,
+    backgroundColor: '#8B5CF6',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 200,
+    width: '40%',
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as '600',
+    color: '#ffffff',
   },
 
   modalHeader: {
