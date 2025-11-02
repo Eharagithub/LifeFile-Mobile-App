@@ -32,32 +32,50 @@ This is the typical experience for a patient user.
    - Signup routes: `signup.tsx` → `createProfile.tsx` → `healthProfile.tsx`.
 
 2) Main area (patient home)
-   - `app/patientProfile/patientHome.tsx` (primary home/dashboard).
-   - Global bottom navigation provided by `app/common/BottomNavigation.tsx` with tabs:
-     - Home → `patientHome`
-     - Alerts → `notification.tsx`
-     - Chat → (project contains a chat tab placeholder — file `chat` may be present elsewhere)
-     - More → opens `SideNavigation` or drawer with more options
+    - `app/patientProfile/patientHome.tsx` (primary home/dashboard). The home screen includes three quick-action buttons visible on the welcome/dashboard: "Medical history", "Active medications", and "Lab results". Tapping each button navigates to the corresponding screen:
+       - Medical history → `/patientProfile/viewHistory` (`app/patientProfile/viewHistory/viewhistory.tsx`)
+       - Active medications → `/patientProfile/activemedications` (`app/patientProfile/activemedications.tsx`)
+       - Lab results → `/patientProfile/labReports/labresults` (`app/patientProfile/labReports/labresults.tsx`) (tapping a specific report opens `detailedLab.tsx`)
+    - Global bottom navigation provided by `app/common/BottomNavigation.tsx` with tabs:
+       - Home → `patientHome`
+       - Alerts → `notification.tsx`
+       - Chat → (project contains a chat tab placeholder — file `chat` may be present elsewhere)
+       - More → opens `SideNavigation` or drawer with more options
 
 3) Alerts & Notifications
    - `app/patientProfile/notification.tsx` — alerts list. Accessible from bottom nav.
 
 4) Lab reports
-   - `app/patientProfile/labReports/labresults.tsx` — lab reports list.
+   - `app/patientProfile/labReports/labresults.tsx` — lab reports list. Accessible from PatientHome page.
    - `app/patientProfile/labReports/detailedLab.tsx` — report detail.
 
 5) Medical history & records
-   - `app/patientProfile/viewHistory/viewhistory.tsx` — history view.
-   - `app/patientProfile/activemedications.tsx` — active medications.
+   - `app/patientProfile/viewHistory/viewhistory.tsx` — history view. Accessible from PatientHome page.
+   - `app/patientProfile/activemedications.tsx` — active medications. Accessible from PatientHome page.
 
 6) More / Profile area
-   - `app/patientProfile/more/` contains:
-     - `patientProfilee/MyProfile.tsx` — main patient profile page.
-     - `patientProfilee/profilePage.tsx` — profile detail view.
-     - `patientProfilee/uploads.tsx` — uploads (imaging, docs).
-     - `patientProfilee/healthtips.tsx` — tips and static content.
-     - `patientProfilee/editProfile/*` — edit flows: `personalinfooredit.tsx`, `contactInfor.tsx`, `changepw.tsx`.
-     - `doctorSearch/doctorSearch.tsx` & `doctor_details.tsx` — search doctors and view details.
+    - The More area (accessible from the bottom navigation or the side drawer) is the patient's profile and utilities hub. It is implemented under `app/patientProfile/more/` and presents a list of options that navigate into specific screens and sub-flows.
+
+    - Typical entry / UX
+       - Tapping More opens the More list / drawer (`app/common/sideNavigation.tsx`). The More list shows rows for: My Profile, Uploads, Health tips, Edit Profile, Doctor Search and related links.
+
+    - Primary items and flows
+       - My Profile → `app/patientProfile/more/patientProfilee/MyProfile.tsx`
+          - Shows a profile summary (name, contact, basic health info). From here the user can tap to view the full profile details (`profilePage.tsx`) or choose an edit action.
+       - Profile details → `app/patientProfile/more/patientProfilee/profilePage.tsx`
+          - Full profile view. Includes actions to edit specific sections (personal info, contact info) which navigate into the edit flows.
+       - Uploads →`app/patientProfile/more/patientProfilee/uploads.tsx`
+          - Shows a list of uploaded documents (reports, images). Contains an Add/Upload action that opens the uploader, allows selecting or taking a photo, and then returns to the uploads list. Items open to preview/download where applicable.
+       - Health tips →`app/patientProfile/more/patientProfilee/healthtips.tsx`
+          - Static or semi-dynamic content: tips, articles, and links. Selecting an item may open an article detail or external link.
+       - Edit Profile flows → `app/patientProfile/more/patientProfilee/editProfile/*`
+          - Sub-screens include `personalinfooredit.tsx`, `contactInfor.tsx`, `changepw.tsx`. Typical flow: open edit screen → make changes → Save → navigate back to `profilePage` or `MyProfile` with updated data.
+       - Doctor Search → `app/patientProfile/more/doctorSearch/doctorSearch.tsx` and doctor details (`app/patientProfile/more/doctorSearch/doctor_details.tsx`)
+          - Search and browse doctors. Selecting a doctor opens `doctor_details.tsx` where the user can view qualifications, contact/book appointment links, or navigate to booking/consultation flows (if implemented).
+
+    - Notes on navigation and data
+       - Most More screens are reachable from the More list and some are reachable from other flows (for example, a medical record viewer may link to Uploads). Edit flows should validate and persist changes via `services/authService.tsx` / profile APIs and then return the user to the profile summary.
+       - If the app uses a modal or drawer for More, the screens may be pushed onto the stack or presented modally depending on the platform and current layout (`app/_layout.tsx`).
 
 Typical patient actions
 - From Home: view alerts, open lab results, view history, go to More → Edit Profile or Uploads.

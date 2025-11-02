@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import SideNavigationDrawer from './sideNavigation';
+//import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'notification' | 'chat' | 'more' | 'none';
+  activeTab: 'home' | 'Alerts' | 'Chat' | 'more' | 'none';
   onTabPress?: (tabName: string) => void;
 }
 
@@ -18,22 +18,21 @@ export default function BottomNavigation({
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
   // Only highlight tab if on these pages
-  const highlightTabs = ['home', 'notification', 'chat', 'more'];
+  const highlightTabs = ['home', 'Alerts', 'Chat', 'more'];
   const shouldHighlight = highlightTabs.includes(activeTab);
 
   const handleTabPress = (tabName: string) => {
     onTabPress(tabName);
     switch (tabName) {
       case 'home':
-        router.push('../../../patientProfile/patientHome');
+        router.push('../doctorProfile/doctorHome');
         break;
-      case 'notification':
-        router.push('../../../patientProfile/notification');
+      case 'Alerts':
+        router.push('../doctorProfile/alerts');
         break;
       case 'chat':
-        router.push('../../../patientProfile/chat');
+        router.push('../doctorProfile/doctorChat');
         break;
-
       case 'more':
         setIsDrawerVisible(true);
         break;
@@ -44,10 +43,10 @@ export default function BottomNavigation({
 
   return (
     <>
-      <SideNavigationDrawer
+      {/* <SideNavigationDrawer
         isVisible={isDrawerVisible}
         onClose={() => setIsDrawerVisible(false)}
-      />
+      /> */}
 
       <View style={styles && styles.container}>
 
@@ -73,26 +72,26 @@ export default function BottomNavigation({
           <Feather
             name="bell"
             size={22}
-            color={shouldHighlight && activeTab === 'notification' ? '#7d4c9e' : '#666'}
+            color={shouldHighlight && activeTab === 'Alerts' ? '#7d4c9e' : '#666'}
           />
           <Text style={styles && [
             styles.tabLabel,
-            shouldHighlight && activeTab === 'notification' && styles.activeTabLabel
+            shouldHighlight && activeTab === 'Alerts' && styles.activeTabLabel
           ]}>Alerts</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles && styles.tabButton}
-          onPress={() => handleTabPress('chat')}
+          onPress={() => handleTabPress('Chat')}
         >
           <Feather
             name="message-circle"
             size={22}
-            color={shouldHighlight && activeTab === 'chat' ? '#7d4c9e' : '#666'}
+            color={shouldHighlight && activeTab === 'Chat' ? '#7d4c9e' : '#666'}
           />
           <Text style={styles && [
             styles.tabLabel,
-            shouldHighlight && activeTab === 'chat' && styles.activeTabLabel
+            shouldHighlight && activeTab === 'Chat' && styles.activeTabLabel
           ]}>Chat</Text>
         </TouchableOpacity>
 

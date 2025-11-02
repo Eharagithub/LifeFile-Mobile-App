@@ -5,7 +5,7 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#f8f8f8',
   },
    header: {
     backgroundColor: '#f2e6ff',
@@ -14,8 +14,6 @@ const styles = StyleSheet.create({
     paddingHorizontal:35,
     
   },
-  
-  
   
   profileSection: {
     flexDirection: 'row',
@@ -55,43 +53,62 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 
- 
- 
-  statsContainer: {
+ // Content styles
+  content: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+
+  // Quick Actions styles
+  quickActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10,
+    justifyContent: 'space-evenly',
+    backgroundColor: '#f2e6ff',
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius:4,
+    marginBottom: 30,
   },
-  statCard: {
+  
+  actionButton: {
     alignItems: 'center',
+    width: '31%',
+    marginBottom: 10,
   },
-  statCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#8B52A8',
+  
+  actionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#7d4c9e',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
   },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  statLabel: {
+  
+  actionText: {
     fontSize: 13,
     color: '#333',
     fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 10,
   },
+ 
+  statNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+
+
   consultationsSection: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop: -15,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    marginTop: -35,
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 15,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -103,6 +120,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+  },
+   headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  refreshIconButton: {
+    padding: 8,
+    color: '#f8f8f8'
   },
   seeAllText: {
     fontSize: 14,
@@ -124,6 +150,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+
+  // Last Updated styles
+  lastUpdatedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+    marginLeft: 15,
+  },
+  
+  lastUpdatedText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 6,
+  },
+
   consultationsList: {
     flex: 1,
   },
