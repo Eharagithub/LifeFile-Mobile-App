@@ -50,6 +50,76 @@ class AuthService {
     return emailRegex.test(email);
   }
 
+  // Save a vault document record under Patient/{uid}/health/history/vault/{YYYY-MM-DD}/documents/{docId}
+  // Supports saving file content directly into Firestore as base64 (field: contentBase64).
+  // fileRecord may contain: name, type, size, uploadedAt, originalName, date, contentBase64
+  // IMPORTANT: Firestore document size limit ~1MiB. We guard and reject files larger than ~900KB.
+  async saveVaultDocument(uid: string, fileRecord: { name: string; type?: string; size?: number; uploadedAt?: string; originalName?: string; date?: string; contentBase64?: string }, role: 'patient' | 'doctor' = 'patient'): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!uid || !fileRecord) return { success: false, error: 'Invalid data provided' };
+
+      const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
+      const userRef = db.collection(collectionName).doc(uid);
+
+      // Ensure date grouping (YYYY-MM-DD)
+      const dateKey = fileRecord.date || new Date().toISOString().slice(0, 10);
+
+      // Basic size guard: Firestore limit ~1,048,576 bytes for whole document.
+      // Base64 inflates binary by ~4/3; we conservatively cap input at 900KB.
+      const sizeBytes = typeof fileRecord.size === 'number' ? fileRecord.size : (fileRecord.contentBase64 ? Math.floor((fileRecord.contentBase64.length * 3) / 4) : 0);
+      const MAX_BYTES = 900 * 1024; // 900 KB
+      if (sizeBytes > MAX_BYTES) {
+        return { success: false, error: 'File too large to store in Firestore. Please use external storage.' };
+      }
+
+      // Create a unique doc id for this file record
+      const docId = `${Date.now()}`;
+
+      const docRef = userRef.collection('health').doc('history').collection('vault').doc(dateKey).collection('documents').doc(docId);
+
+      const recordToSave: any = {
+        name: fileRecord.name || fileRecord.originalName || 'file',
+        type: fileRecord.type || '',
+        size: sizeBytes,
+        originalName: fileRecord.originalName || fileRecord.name || '',
+        uploadedAt: fileRecord.uploadedAt || new Date().toISOString(),
+        date: dateKey,
+      };
+
+      if (fileRecord.contentBase64) {
+        // store base64 content in a dedicated field
+        recordToSave.contentBase64 = fileRecord.contentBase64;
+      }
+
+      try {
+        await docRef.set(recordToSave, { merge: true });
+        return { success: true };
+      } catch (err: any) {
+        // If permissions prevent writing to subcollections, attempt a graceful fallback:
+        // write the record as a nested map inside the user's main document under `health.history.vault.<date>.documents.<docId>`
+        console.warn('Primary write to vault subcollection failed, attempting fallback to top-level user doc:', err);
+        if (err && (err.code === 'permission-denied' || String(err).toLowerCase().includes('permission'))) {
+          try {
+            const fallbackField = `health.history.vault.${dateKey}.documents.${docId}`;
+            // Use update with field path to set nested map without replacing the whole document
+            await userRef.update({ [fallbackField]: recordToSave });
+            return { success: true };
+          } catch (fallbackErr: any) {
+            console.error('Fallback write to user document failed:', fallbackErr);
+            return { success: false, error: 'Failed to save vault document (permission denied)' };
+          }
+        }
+
+        // If it's not a permission error, rethrow/log
+        console.error('Error saving vault document record to subcollection:', err);
+        return { success: false, error: 'Failed to save vault document' };
+      }
+    } catch (error: any) {
+      console.error('Error saving vault document record:', error);
+      return { success: false, error: 'Failed to save vault document' };
+    }
+  }
+
   // Password validation
   private validatePassword(password: string): { isValid: boolean; message?: string } {
     if (password.length < 8) {

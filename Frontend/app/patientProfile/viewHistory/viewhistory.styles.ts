@@ -68,7 +68,7 @@ export default StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingVertical: 25,
     borderRadius: 12,
     marginBottom: 12,
     shadowColor: '#000',

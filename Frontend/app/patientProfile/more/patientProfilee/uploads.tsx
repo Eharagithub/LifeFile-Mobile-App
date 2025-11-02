@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,10 @@ import {
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { styles } from './uploads.styles';
+import { auth } from '../../../../config/firebaseConfig';
+import authService from '../../../../services/authService';
+// Use the legacy FileSystem API to preserve readAsStringAsync behaviour
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import BottomNavigation from '../../../common/BottomNavigation';
 
@@ -47,16 +51,36 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 copyToCacheDirectory: true,
             });
 
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-                const file = result.assets[0];
+            // DocumentPicker returns either a single result with type === 'success'
+            // or an object with assets for some pickers. Support both shapes.
+            // Example successful result: { type: 'success', name, uri, size, mimeType }
+            if ((result as any).type === 'success') {
+                const r: any = result;
                 const documentResult: DocumentResult = {
-                    name: file.name,
+                    name: r.name || 'file',
+                    uri: r.uri,
+                    type: r.mimeType || r.type || 'unknown',
+                    size: r.size || 0,
+                };
+                onFileSelect(documentResult);
+                return;
+            }
+
+            // Fallback: some pickers return assets array (image picker). Handle that too.
+            if ((result as any).assets && Array.isArray((result as any).assets) && (result as any).assets.length > 0) {
+                const file: any = (result as any).assets[0];
+                const documentResult: DocumentResult = {
+                    name: file.name || file.fileName || 'file',
                     uri: file.uri,
-                    type: file.mimeType || 'unknown',
+                    type: file.mimeType || file.type || 'unknown',
                     size: file.size || 0,
                 };
                 onFileSelect(documentResult);
+                return;
             }
+
+            // If canceled or unsupported shape
+            // do nothing (user canceled) — caller will see no file selected
         } catch (error) {
             Alert.alert('Error', 'Failed to select file');
             console.error('File selection error:', error);
@@ -120,13 +144,12 @@ const NavigationItem: React.FC<NavigationItemProps> = ({
 const Uploads: React.FC = () => {
     const [medicalVaultFile, setMedicalVaultFile] = useState<DocumentResult | null>(null);
     const [reportsFile, setReportsFile] = useState<DocumentResult | null>(null);
+    const [uploading, setUploading] = useState<boolean>(false);
 
     const router = useRouter();
-      const [activeTab, setActiveTab] = useState<'Pre-consult Tests' | 'Wellness' | 'Meal Preferences'>('Pre-consult Tests');
-    
-      const handleBack = () => {
-        router.back();
-      };
+        const handleBack = () => {
+                router.back();
+        };
     
 
     const handleSearchPastLabRecords = () => {
@@ -140,6 +163,85 @@ const Uploads: React.FC = () => {
         console.log('Go to Past Medical History pressed');
         // Navigate to medical history screen
     };
+
+    const getCurrentUid = () => auth.currentUser ? auth.currentUser.uid : null;
+
+    const uploadFileToVault = useCallback(async (file: DocumentResult | null, category: string = 'medical') => {
+        if (!file) {
+            Alert.alert('No file', 'Please select a file first.');
+            return;
+        }
+
+        const uid = getCurrentUid();
+        if (!uid) {
+            Alert.alert('Not signed in', 'You must be signed in to upload files.');
+            return;
+        }
+
+    setUploading(true);
+
+        try {
+            // Read file content as base64 using Expo FileSystem
+            const dateKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+            // Read as base64. Use a simple string option to avoid type mismatch with older expo-file-system types.
+            let base64 = '';
+            try {
+                base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' } as any);
+            } catch (readErr) {
+                console.error('Failed to read file as base64 via FileSystem:', readErr);
+                Alert.alert('Upload failed', 'Unable to read the selected file. Some Android URIs may not be supported by the file reader.');
+                setUploading(false);
+                return;
+            }
+
+            // determine role (patient/doctor) to pick collection
+            const roles = await authService.determineRoles(uid);
+            const role: 'patient' | 'doctor' = roles.isPatient ? 'patient' : roles.isDoctor ? 'doctor' : 'patient';
+
+            const sizeEstimate = file.size || Math.floor((base64.length * 3) / 4);
+            const fileRecord: any = {
+                name: file.name,
+                originalName: file.name,
+                type: file.type || '',
+                size: sizeEstimate,
+                contentBase64: base64,
+                uploadedAt: new Date().toISOString(),
+                date: dateKey,
+                category,
+            };
+
+            const res = await authService.saveVaultDocument(uid, fileRecord, role);
+            if (res.success) {
+                Alert.alert('Uploaded', 'File uploaded to your medical vault.');
+                // clear selected file after success
+                if (category === 'medical') setMedicalVaultFile(null);
+                else setReportsFile(null);
+            } else {
+                console.error('saveVaultDocument failed:', res.error);
+                Alert.alert('Upload failed', res.error || 'Failed to save document record');
+            }
+
+        } catch (err) {
+            console.error('Upload failed:', err);
+            Alert.alert('Upload failed', 'Failed to upload file.');
+        } finally {
+            setUploading(false);
+        }
+    }, []);
+
+    // Auto-upload when a file is selected (so users who pick a file don't need to press upload)
+    useEffect(() => {
+        if (medicalVaultFile && !uploading) {
+            uploadFileToVault(medicalVaultFile, 'medical');
+        }
+    }, [medicalVaultFile, uploadFileToVault, uploading]);
+
+    useEffect(() => {
+        if (reportsFile && !uploading) {
+            uploadFileToVault(reportsFile, 'reports');
+        }
+    }, [reportsFile, uploadFileToVault, uploading]);
 
 
     return (
@@ -166,17 +268,17 @@ const Uploads: React.FC = () => {
                     description="Upload Diagnosis Cards, Prescriptions, etc."
                     onFileSelect={setMedicalVaultFile}
                     selectedFile={medicalVaultFile}
-                    iconName="document-text"
+                    iconName="folder"
                     iconColor="#673AB7"
                     iconBackgroundColor="#f1e6f3ff"
                 />
 
                 <FileUploadSection
                     title="My Reports"
-                    description="Upload Documents"
+                    description="Upload Lab Reports"
                     onFileSelect={setReportsFile}
                     selectedFile={reportsFile}
-                    iconName="folder"
+                    iconName="document-text"
                     iconColor="#673AB7"
                     iconBackgroundColor="#f1e6f3ff"
                 />
