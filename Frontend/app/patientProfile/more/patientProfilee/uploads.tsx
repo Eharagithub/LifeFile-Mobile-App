@@ -154,13 +154,13 @@ const Uploads: React.FC = () => {
 
     const handleSearchPastLabRecords = () => {
         // Handle search past lab records navigation
-        console.log('Search Past Lab Records pressed');
+        router.push('../../labReports/labresults');
         // Navigate to search screen
     };
 
     const handleGoToPastMedicalHistory = () => {
         // Handle go to past medical history navigation
-        console.log('Go to Past Medical History pressed');
+        router.push('../../viewHistory/viewhistory');
         // Navigate to medical history screen
     };
 
@@ -198,6 +198,15 @@ const Uploads: React.FC = () => {
             // determine role (patient/doctor) to pick collection
             const roles = await authService.determineRoles(uid);
             const role: 'patient' | 'doctor' = roles.isPatient ? 'patient' : roles.isDoctor ? 'doctor' : 'patient';
+            // Quick client-side guard against storing very large base64 strings in Firestore.
+            // Firestore documents have a ~1MiB limit; storing base64 can exceed that even for modest files.
+            // We enforce a conservative cap on the base64 string length (characters).
+            const MAX_BASE64_CHARS = 1040000; // ~1.04M characters ~= safe margin under Firestore limits
+            if (base64.length > MAX_BASE64_CHARS) {
+                Alert.alert('File too large', 'This file is too large to store in Firestore as base64. Please reduce the file size or use external storage (Firebase Storage).');
+                setUploading(false);
+                return;
+            }
 
             const sizeEstimate = file.size || Math.floor((base64.length * 3) / 4);
             const fileRecord: any = {
@@ -211,15 +220,43 @@ const Uploads: React.FC = () => {
                 category,
             };
 
-            const res = await authService.saveVaultDocument(uid, fileRecord, role);
+            let res: { success: boolean; error?: string } = { success: false };
+            if (category === 'reports') {
+                // Save reports under health/history/labs
+                res = await authService.saveLabDocument(uid, fileRecord, role);
+            } else {
+                // Default: save to vault
+                res = await authService.saveVaultDocument(uid, fileRecord, role);
+            }
+
             if (res.success) {
-                Alert.alert('Uploaded', 'File uploaded to your medical vault.');
+                if ((res as any).fallback) {
+                    // Saved via nested-map fallback — subcollection/tab not created
+                    Alert.alert('Uploaded (fallback)', 'Report saved but Firestore subcollection could not be created due to permissions. The record is stored inside your user document. To get a separate "labs" collection/tab, allow subcollection writes in Firestore rules.');
+                } else {
+                    Alert.alert('Uploaded', category === 'reports' ? 'Report uploaded to your lab history.' : 'File uploaded to your medical vault.');
+                }
                 // clear selected file after success
                 if (category === 'medical') setMedicalVaultFile(null);
-                else setReportsFile(null);
+                else if (category === 'reports') setReportsFile(null);
             } else {
-                console.error('saveVaultDocument failed:', res.error);
+                console.error('save document failed:', res.error);
                 Alert.alert('Upload failed', res.error || 'Failed to save document record');
+            }
+
+            // Run a quick verification read to confirm whether the subcollection contains documents
+            if (category === 'reports') {
+                try {
+                    const listRes = await authService.listLabDocuments(uid, dateKey, role);
+                    if (listRes.success) {
+                        Alert.alert('Verification', `Lab documents found in subcollection: ${listRes.count}`);
+                    } else {
+                        // likely permissions prevented reading the subcollection
+                        Alert.alert('Verification', `Unable to read labs subcollection: ${listRes.error}`);
+                    }
+                } catch (e) {
+                    console.warn('Verification read failed', e);
+                }
             }
 
         } catch (err) {

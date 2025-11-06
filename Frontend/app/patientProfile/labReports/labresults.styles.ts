@@ -127,6 +127,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
+
+  
   
   // Lab Report Item Styles
   labReportContainer: {

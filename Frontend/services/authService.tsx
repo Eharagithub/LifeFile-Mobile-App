@@ -67,9 +67,14 @@ class AuthService {
       // Basic size guard: Firestore limit ~1,048,576 bytes for whole document.
       // Base64 inflates binary by ~4/3; we conservatively cap input at 900KB.
       const sizeBytes = typeof fileRecord.size === 'number' ? fileRecord.size : (fileRecord.contentBase64 ? Math.floor((fileRecord.contentBase64.length * 3) / 4) : 0);
-      const MAX_BYTES = 900 * 1024; // 900 KB
+      const MAX_BYTES = 900 * 1024; // 900 KB (decoded binary)
+      // Also guard against base64 string length (characters) because Firestore counts bytes of the stored string.
+      const MAX_BASE64_CHARS = Math.floor(MAX_BYTES * 4 / 3); // safe equivalent in base64 chars
       if (sizeBytes > MAX_BYTES) {
         return { success: false, error: 'File too large to store in Firestore. Please use external storage.' };
+      }
+      if (fileRecord.contentBase64 && fileRecord.contentBase64.length > MAX_BASE64_CHARS) {
+        return { success: false, error: 'File too large to store in Firestore (base64). Please use external storage.' };
       }
 
       // Create a unique doc id for this file record
@@ -117,6 +122,91 @@ class AuthService {
     } catch (error: any) {
       console.error('Error saving vault document record:', error);
       return { success: false, error: 'Failed to save vault document' };
+    }
+  }
+
+  // Save a lab report under Patient/{uid}/health/history/labs/{YYYY-MM-DD}/documents/{docId}
+  // Same behavior as saveVaultDocument but stores under the 'labs' grouping.
+  async saveLabDocument(uid: string, fileRecord: { name: string; type?: string; size?: number; uploadedAt?: string; originalName?: string; date?: string; contentBase64?: string }, role: 'patient' | 'doctor' = 'patient'): Promise<{ success: boolean; fallback?: boolean; error?: string }> {
+    try {
+      if (!uid || !fileRecord) return { success: false, error: 'Invalid data provided' };
+
+      const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
+      const userRef = db.collection(collectionName).doc(uid);
+
+      const dateKey = fileRecord.date || new Date().toISOString().slice(0, 10);
+
+      const sizeBytes = typeof fileRecord.size === 'number' ? fileRecord.size : (fileRecord.contentBase64 ? Math.floor((fileRecord.contentBase64.length * 3) / 4) : 0);
+      const MAX_BYTES = 900 * 1024; // 900 KB (decoded binary)
+      const MAX_BASE64_CHARS = Math.floor(MAX_BYTES * 4 / 3);
+      if (sizeBytes > MAX_BYTES) {
+        return { success: false, error: 'File too large to store in Firestore. Please use external storage.' };
+      }
+      if (fileRecord.contentBase64 && fileRecord.contentBase64.length > MAX_BASE64_CHARS) {
+        return { success: false, error: 'File too large to store in Firestore (base64). Please use external storage.' };
+      }
+
+      const docId = `${Date.now()}`;
+      const docRef = userRef.collection('health').doc('history').collection('labs').doc(dateKey).collection('documents').doc(docId);
+
+      const recordToSave: any = {
+        name: fileRecord.name || fileRecord.originalName || 'file',
+        type: fileRecord.type || '',
+        size: sizeBytes,
+        originalName: fileRecord.originalName || fileRecord.name || '',
+        uploadedAt: fileRecord.uploadedAt || new Date().toISOString(),
+        date: dateKey,
+      };
+
+      if (fileRecord.contentBase64) {
+        recordToSave.contentBase64 = fileRecord.contentBase64;
+      }
+
+      try {
+        await docRef.set(recordToSave, { merge: true });
+        return { success: true };
+      } catch (err: any) {
+        console.warn('Primary write to labs subcollection failed, attempting fallback to top-level user doc:', err);
+        if (err && (err.code === 'permission-denied' || String(err).toLowerCase().includes('permission'))) {
+          try {
+            const fallbackField = `health.history.labs.${dateKey}.documents.${docId}`;
+            await userRef.update({ [fallbackField]: recordToSave });
+            // Indicate fallback was used so the UI can surface that no subcollection/tab exists
+            return { success: true, fallback: true };
+          } catch (fallbackErr: any) {
+            console.error('Fallback write to user document failed:', fallbackErr);
+            return { success: false, error: 'Failed to save lab document (permission denied)' };
+          }
+        }
+
+        console.error('Error saving lab document record to subcollection:', err);
+        return { success: false, error: 'Failed to save lab document' };
+      }
+    } catch (error: any) {
+      console.error('Error saving lab document record:', error);
+      return { success: false, error: 'Failed to save lab document' };
+    }
+  }
+
+  // List lab documents under Patient/{uid}/health/history/labs/{date}/documents
+  async listLabDocuments(uid: string, dateKey?: string, role: 'patient' | 'doctor' = 'patient'): Promise<{ success: boolean; count?: number; docs?: any[]; error?: string }> {
+    try {
+      if (!uid) return { success: false, error: 'Invalid UID' };
+      const dKey = dateKey || new Date().toISOString().slice(0, 10);
+      const collectionName = role === 'patient' ? 'Patient' : 'Doctor';
+      const docsRef = db.collection(collectionName).doc(uid)
+        .collection('health').doc('history')
+        .collection('labs').doc(dKey)
+        .collection('documents');
+
+      const snap = await docsRef.get();
+      if (!snap) return { success: true, count: 0, docs: [] };
+      const items: any[] = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      return { success: true, count: items.length, docs: items };
+    } catch (error: any) {
+      console.error('Error listing lab documents:', error);
+      return { success: false, error: String(error) };
     }
   }
 
