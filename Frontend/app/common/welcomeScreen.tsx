@@ -35,22 +35,29 @@ interface ChatMessage {
 const walkthroughData: WalkthroughItem[] = [
   {
     id: '1',
-    image: require('../../assets/images/walk-1.jpg'),
-    title: 'Connect With Your Care Team',
-    description: 'Easily share health records and stay connected with doctors, caregivers, and family members.',
+    image: require('../../assets/images/state.webp'),
+    title: 'See your health come alive',
+    description: 'Stay on top of your health anytime, anywhere. Track your wellness journey with clarity and confidence',
   },
   {
     id: '2',
-    image: require('../../assets/images/walk-2.jpg'),
-    title: 'Track & Manage Your Health',
-    description: 'Keep all your medical history, prescriptions, and reports securely in one place.',
+    image: require('../../assets/images/sich.png'),
+    title: 'Know your condition. Know your next step.',
+    description: 'Let AI help you understand what’s really happening inside your body.',
   },
   {
     id: '3',
-    image: require('../../assets/images/walk-3.jpg'),
-    title: 'Your Personal AI Health Assistant',
-    description: 'Get smart reminders, insights, and recommendations to support your well-being.'
+    image: require('../../assets/images/walk-2.jpg'),
+    title: 'Connect with care, instantly',
+    description: 'Prepare, discuss, and follow up with confidence. One tap to your trusted doctor'
   },
+  {
+    id: '4',
+    image: require('../../assets/images/walk-3.jpg'),
+    title: 'Your personalized health Roadmap',
+    description: 'Navigate from diagnosis to recovery with guided support'
+  },
+
 ];
 
 // Change from export function to export default function

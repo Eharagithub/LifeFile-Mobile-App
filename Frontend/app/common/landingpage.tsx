@@ -1,18 +1,14 @@
-import { View, Image, StyleSheet, Dimensions, ImageSourcePropType, TouchableOpacity } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, ImageSourcePropType, TouchableOpacity, Text } from 'react-native';
 import React, { useEffect } from 'react';
-//import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-const { height } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
 
 // Update these paths to your actual asset locations
 const pillsImg: ImageSourcePropType = require('../../assets/images/pills.png');
 const stethoscopeImg: ImageSourcePropType = require('../../assets/images/st.png');
 const bandageImg: ImageSourcePropType = require('../../assets/images/bandage.png');
-//const logoImg: ImageSourcePropType = require('../../assets/images/logo.png');
-// const injection: ImageSourcePropType = require('../../assets/images/injection.png');
 const plaster: ImageSourcePropType = require('../../assets/images/plaster.png');
-
 
 const Landingpage: React.FC = () => {
   const router = useRouter();
@@ -28,20 +24,17 @@ const Landingpage: React.FC = () => {
   const handleSkip = () => {
     // Navigate immediately if user taps anywhere
     router.push('/common/welcomeScreen');
-  }; return (
+  };
+
+  return (
     <TouchableOpacity
       style={styles.container}
       activeOpacity={1}
       onPress={handleSkip}>
 
       <Image source={pillsImg} style={styles.pills} resizeMode="contain" />
-
       <Image source={stethoscopeImg} style={styles.stethoscope} resizeMode="contain" />
-
       <Image source={bandageImg} style={styles.bandage} resizeMode="contain" />
-
-      {/* <Image source={injection} style={styles.injection} resizeMode="contain" /> */}
-
       <Image source={plaster} style={styles.plaster} resizeMode="contain" />
 
       <View style={styles.logoContainer}>
@@ -50,7 +43,12 @@ const Landingpage: React.FC = () => {
           style={styles.logo}
           resizeMode="contain"
         />
+      </View>
 
+      {/* Powered by footer - Industry standard placement */}
+      <View style={styles.poweredByContainer}>
+        <Text style={styles.poweredByText}>Powered by</Text>
+        <Text style={styles.companyName}>Agentic Ensemble AI</Text>
       </View>
 
     </TouchableOpacity>
@@ -64,7 +62,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -75,7 +72,6 @@ const styles = StyleSheet.create({
     height: 470,
     marginBottom: 10,
   },
-
   pills: {
     position: 'absolute',
     top: 30,
@@ -101,15 +97,6 @@ const styles = StyleSheet.create({
     height: 75,
     opacity: 0.3,
   },
-  injection: {
-    position: 'absolute',
-    top: 370,
-    right: -5,
-    width: 250,
-    height: 250,
-    opacity: 0.3,
-    transform: [{ rotate: '-15deg' }], // Add this line to rotate the image 45 degrees
-  },
   plaster: {
     position: 'absolute',
     top: 10,
@@ -117,13 +104,31 @@ const styles = StyleSheet.create({
     width: 200,
     height: 100,
     opacity: 0.3,
-    transform: [{ rotate: '5deg' }], // Add this line to rotate the image -45 degrees
+    transform: [{ rotate: '5deg' }],
   },
-
+  poweredByContainer: {
+    position: 'absolute',
+    bottom: 30, // Standard spacing from bottom
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    //backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white background
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+     elevation: 3, // For Android shadow
+  },
+  poweredByText: {
+    fontSize: 12,
+    color: '#666', // Subtle gray color
+    fontWeight: '400',
+    marginBottom: 2,
+  },
+  companyName: {
+    fontSize: 14,
+    color: '#460404ff', // Darker color for company name
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
 });
 
 export default Landingpage;
-
-
-
-

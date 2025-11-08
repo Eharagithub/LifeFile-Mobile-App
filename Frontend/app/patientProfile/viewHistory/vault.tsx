@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ActivityIndicator, Image, ScrollView, Dimensions, TouchableOpacity, Alert, Linking, StyleSheet } from 'react-native';
+import { View, Text, SafeAreaView, ActivityIndicator, Image, ScrollView, Dimensions, TouchableOpacity, Alert, Linking, StyleSheet, Modal, Share, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db, auth } from '../../../config/firebaseConfig';
 //import styles from './viewhistory.styles';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+
 const { width, height } = Dimensions.get('window');
 
 
@@ -14,6 +17,7 @@ export default function VaultView() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [doc, setDoc] = useState<any>(null);
+    const [hasMediaPermission, setHasMediaPermission] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const getCurrentUid = () => auth.currentUser ? auth.currentUser.uid : null;
 
@@ -125,14 +129,222 @@ export default function VaultView() {
         };
         run();
     }, [doc]);
-    const handleDownload = () => {
-        setShowOptionsMenu(false);
-        Alert.alert('Success', 'Lab report downloaded successfully!');
+
+    // Request media library permissions
+    useEffect(() => {
+        const requestMediaPermission = async () => {
+            try {
+                const { status } = await MediaLibrary.requestPermissionsAsync();
+                setHasMediaPermission(status === 'granted');
+
+                if (status !== 'granted') {
+                    Alert.alert(
+                        'Permission Required',
+                        'Please grant media library permissions to save files to your gallery.',
+                        [{ text: 'OK' }]
+                    );
+                }
+            } catch (error) {
+                console.error('Error requesting media permission:', error);
+            }
+        };
+
+        requestMediaPermission();
+    }, []);
+
+
+    const saveToGallery = async (fileUri: string, mimeType: string) => {
+        try {
+            // For images, use MediaLibrary to save to gallery
+            if (mimeType.startsWith('image/')) {
+                const asset = await MediaLibrary.createAssetAsync(fileUri);
+                await MediaLibrary.createAlbumAsync('Download', asset, false);
+                return true;
+            } else {
+                // For other file types, we'll save to Documents folder
+                // and show a message about where to find it
+                const documentDir = FileSystem.documentDirectory;
+                const fileName = `vault_document_${Date.now()}.${getFileExtension(mimeType)}`;
+                const newPath = `${documentDir}${fileName}`;
+
+                await FileSystem.copyAsync({
+                    from: fileUri,
+                    to: newPath
+                });
+
+                return newPath;
+            }
+        } catch (error) {
+            console.error('Error saving to gallery:', error);
+            throw error;
+        }
     };
 
-    const handleShare = () => {
+    const getFileExtension = (mimeType: string) => {
+        const extensions: { [key: string]: string } = {
+            'application/pdf': 'pdf',
+            'image/jpeg': 'jpg',
+            'image/jpg': 'jpg',
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'text/plain': 'txt',
+            'application/json': 'json',
+            'text/xml': 'xml',
+            'application/xml': 'xml',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+            'application/vnd.ms-excel': 'xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+            'application/vnd.ms-powerpoint': 'ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+        };
+
+        return extensions[mimeType] || 'bin';
+    };
+    // Helper function to get UTI for iOS (Uniform Type Identifier)
+    const getUTIForFileType = (mimeType: string): string => {
+        const utiMap: { [key: string]: string } = {
+            'application/pdf': 'com.adobe.pdf',
+            'image/jpeg': 'public.jpeg',
+            'image/jpg': 'public.jpeg',
+            'image/png': 'public.png',
+            'image/gif': 'public.gif',
+            'text/plain': 'public.plain-text',
+            'application/json': 'public.json',
+            'text/xml': 'public.xml',
+            'application/xml': 'public.xml',
+        };
+
+        return utiMap[mimeType] || 'public.data';
+    };
+
+    const getFileName = () => {
+        if (doc?.name) return doc.name;
+        return `vault_document_${Date.now()}.${getFileExtension(doc?.type || '')}`;
+    };
+
+    const handleDownload = async () => {
+        console.log('handleDownload called, docId=', doc && doc.id);
         setShowOptionsMenu(false);
-        Alert.alert('Share', 'Share options opened');
+
+        if (!doc?.contentBase64) {
+            Alert.alert('Error', 'No document content available to download.');
+            return;
+        }
+
+        if (!hasMediaPermission) {
+            Alert.alert(
+                'Permission Required',
+                'Please grant media library permissions in your device settings to save files.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        try {
+            // Show loading indicator
+            Alert.alert('Downloading', 'Please wait...', [], { cancelable: false });
+
+            const fileExt = getFileExtension(doc.type || '');
+            const tempFilePath = await createTempFileFromBase64(doc.contentBase64, fileExt);
+
+            let result;
+            if (doc.type && doc.type.startsWith('image/')) {
+                // For images, save to gallery
+                result = await saveToGallery(tempFilePath, doc.type);
+                Alert.alert('Success', 'Image saved to your gallery!');
+            } else {
+                // For other files, save to documents directory
+                result = await saveToGallery(tempFilePath, doc.type || '');
+                Alert.alert(
+                    'Success',
+                    `File saved to your documents folder!\n\nPath: ${result}`,
+                    [{ text: 'OK' }]
+                );
+            }
+
+            // Clean up temp file
+            try {
+                await FileSystem.deleteAsync(tempFilePath);
+            } catch (cleanupError) {
+                console.warn('Could not delete temp file:', cleanupError);
+            }
+
+        } catch (error) {
+            console.error('Download failed:', error);
+            Alert.alert(
+                'Download Failed',
+                'Could not save the file. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
+    };
+
+
+    const handleShare = async () => {
+        console.log('handleShare called, docId=', doc && doc.id);
+        setShowOptionsMenu(false);
+
+        if (!doc?.contentBase64) {
+            Alert.alert('Error', 'No document content available to share.');
+            return;
+        }
+
+        try {
+            // Show loading indicator
+            Alert.alert('Preparing Share', 'Please wait...', [], { cancelable: false });
+
+            const fileExt = getFileExtension(doc.type || '');
+            const tempFilePath = await createTempFileFromBase64(doc.contentBase64, fileExt);
+
+            // Get a proper filename
+            const fileName = doc.name ? `${doc.name}.${fileExt}` : `vault_document_${Date.now()}.${fileExt}`;
+
+            // For Android, we need to move the file to a shareable location
+            let shareablePath = tempFilePath;
+            if (Platform.OS === 'android') {
+                const documentDir = FileSystem.documentDirectory;
+                const newPath = `${documentDir}${fileName}`;
+                await FileSystem.copyAsync({
+                    from: tempFilePath,
+                    to: newPath
+                });
+                shareablePath = newPath;
+            }
+
+            // Check if sharing is available
+            const isSharingAvailable = await Sharing.isAvailableAsync();
+            if (!isSharingAvailable) {
+                Alert.alert('Error', 'Sharing is not available on this device.');
+                return;
+            }
+
+            // Share the file
+            await Sharing.shareAsync(shareablePath, {
+                mimeType: doc.type || 'application/octet-stream',
+                dialogTitle: `Share ${doc.name || 'Document'}`,
+                UTI: getUTIForFileType(doc.type) // iOS only
+            });
+
+            // Clean up temp files after a delay to ensure sharing is complete
+            setTimeout(async () => {
+                try {
+                    await FileSystem.deleteAsync(tempFilePath);
+                    if (Platform.OS === 'android' && shareablePath !== tempFilePath) {
+                        await FileSystem.deleteAsync(shareablePath);
+                    }
+                } catch (cleanupError) {
+                    console.warn('Could not delete temp files after sharing:', cleanupError);
+                }
+            }, 5000);
+
+        } catch (error) {
+            console.error('Share failed:', error);
+            Alert.alert(
+                'Share Failed',
+                'Could not share the file. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
     };
 
     const toggleOptionsMenu = () => {
@@ -164,11 +376,13 @@ export default function VaultView() {
                 >
                     <Feather name="chevron-left" size={24} color="#333" />
                 </TouchableOpacity>
+
                 <Text style={styles.headerTitle}>{doc.name || 'Vault Document'}</Text>
             </View>
 
             {/* Main Content Area */}
             <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                {/* options menu is rendered in a Modal so it isn't blocked by other layers */}
                 <View style={styles.mainContent}>
                     {/* Lab Report Container - Purple background area */}
                     <View style={styles.labReportContainer}>
@@ -180,24 +394,31 @@ export default function VaultView() {
                             <Feather name="more-vertical" size={20} color="#666" />
                         </TouchableOpacity>
 
-                        {/* Options Menu Dropdown */}
+                        {/* Options Menu Dropdown (rendered in a Modal so it sits above overlays) */}
                         {showOptionsMenu && (
-                            <View style={styles.optionsMenu}>
-                                <TouchableOpacity
-                                    style={styles.optionItem}
-                                    onPress={handleDownload}
-                                >
-                                    <Feather name="download" size={16} color="#8b5cf6" />
-                                    <Text style={styles.optionText}>Download</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.optionItem}
-                                    onPress={handleShare}
-                                >
-                                    <Feather name="share-2" size={16} color="#8b5cf6" />
-                                    <Text style={styles.optionText}>Share</Text>
-                                </TouchableOpacity>
-                            </View>
+                            <Modal transparent animationType="fade" visible={showOptionsMenu} onRequestClose={() => setShowOptionsMenu(false)}>
+                                <View style={{ flex: 1 }}>
+                                    <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowOptionsMenu(false)} />
+                                    <View style={styles.modalMenuPosition} pointerEvents="box-none">
+                                        <View style={styles.optionsMenu}>
+                                            <TouchableOpacity
+                                                style={styles.optionItem}
+                                                onPress={handleDownload}
+                                            >
+                                                <Feather name="download" size={16} color="#8b5cf6" />
+                                                <Text style={styles.optionText}>Download</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.optionItem}
+                                                onPress={handleShare}
+                                            >
+                                                <Feather name="share-2" size={16} color="#8b5cf6" />
+                                                <Text style={styles.optionText}>Share</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </View>
+                            </Modal>
                         )}
 
                         {/* Content Area - full document display (image / pdf / text / fallback) */}
@@ -227,8 +448,8 @@ export default function VaultView() {
                                         <TouchableOpacity onPress={() => openFile(doc.contentBase64, doc.type)} style={{ marginRight: 12, backgroundColor: '#fff', padding: 10, borderRadius: 8 }}>
                                             <Text style={{ color: '#8B5CF6' }}>Open</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => openFile(doc.contentBase64, doc.type)} style={{ backgroundColor: '#fff', padding: 10, borderRadius: 8 }}>
-                                            <Text style={{ color: '#8B5CF6' }}>Download</Text>
+                                        <TouchableOpacity onPress={handleShare} style={{ backgroundColor: '#fff', padding: 10, borderRadius: 8 }}>
+                                            <Text style={{ color: '#8B5CF6' }}>Share</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -239,14 +460,7 @@ export default function VaultView() {
                     {/* Floating Action Buttons - Remove since options are now in dropdown */}
                 </View>
 
-                {/* Overlay to close options menu when touching outside */}
-                {showOptionsMenu && (
-                    <TouchableOpacity
-                        style={styles.overlay}
-                        onPress={() => setShowOptionsMenu(false)}
-                        activeOpacity={1}
-                    />
-                )}
+                {/* overlay moved earlier to avoid blocking the options menu */}
 
 
             </ScrollView>
@@ -376,5 +590,19 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         zIndex: 10,
+    },
+    modalOverlay: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.2)'
+    },
+    modalMenuPosition: {
+        position: 'absolute' as const,
+        top: 60,
+        right: 16,
+        zIndex: 100,
     },
 });
