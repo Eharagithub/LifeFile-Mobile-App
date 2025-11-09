@@ -43,7 +43,7 @@ const walkthroughData: WalkthroughItem[] = [
     id: '2',
     image: require('../../assets/images/sich.png'),
     title: 'Know your condition. Know your next step.',
-    description: 'Let AI help you understand what’s really happening inside your body.',
+    description: 'Let Arti help you understand what’s really happening inside your body.',
   },
   {
     id: '3',

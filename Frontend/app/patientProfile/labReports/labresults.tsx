@@ -30,213 +30,145 @@ interface LabReport {
   pdfUrl?: string;
   imageUrl?: string;
   type: 'pdf' | 'image';
+  uploadedAt?: string;
+  dateFolder?: string;
 }
 
 interface DateGroup {
   date: string;
+  originalDate: string;
   reports: LabReport[];
 }
 
 export default function LabReports() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'results' | 'trends'>('results');
-  const [dateKey, setDateKey] = useState(''); // for date-based load (YYYY-MM-DD)
-
-  // live data loaded from Firestore
+  const [dateKey, setDateKey] = useState('');
   const [labData, setLabData] = useState<DateGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [navigating, setNavigating] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    
-    const fallbackReadFromUserDoc = async (uid: string): Promise<DateGroup[]> => {
-      console.debug('[labresults] attempting fallback read from main user doc for uid:', uid);
-      const groups: DateGroup[] = [];
-      try {
-        const userDoc = await db.collection('Patient').doc(uid).get();
-        const data = userDoc.exists ? (userDoc.data() || {}) : {};
-        const labsMap = ((data as any).health && (data as any).health.history && (data as any).health.history.labs) || ((data as any).health && (data as any).health.history && (data as any).health.history.lab) || null;
-        if (labsMap && typeof labsMap === 'object') {
-          for (const dateKey of Object.keys(labsMap)) {
-            const dateNode = (labsMap as any)[dateKey];
-            const documentsNode = dateNode && dateNode.documents ? dateNode.documents : dateNode; // some fallbacks may nest differently
-            const reports: LabReport[] = [];
-            if (documentsNode && typeof documentsNode === 'object') {
-              for (const docId of Object.keys(documentsNode)) {
-                const docData = documentsNode[docId];
-                try {
-                  reports.push(parseReportFromData(docId, docData));
-                } catch (e) {
-                  console.warn('[labresults] failed to parse fallback doc', docId, e);
-                }
-              }
-            }
-
-            let displayDate = dateKey;
-            try { displayDate = new Date(dateKey).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } catch {}
-            if (reports.length) groups.push({ date: displayDate, reports });
-          }
-        }
-
-        // If nothing found in the expected path, do a deep scan for objects that resemble saved docs
-        if (groups.length === 0) {
-          console.debug('[labresults] no labs found under health.history.labs; performing deep scan of user document');
-          const found: { path: string[]; id: string; data: any }[] = [];
-
-          const isDocLike = (obj: any) => {
-            if (!obj || typeof obj !== 'object') return false;
-            // heuristics: presence of uploadedAt, originalName, contentBase64 or type
-            return ('uploadedAt' in obj) || ('originalName' in obj) || ('contentBase64' in obj) || ('type' in obj && 'name' in obj);
-          };
-
-          const traverse = (node: any, path: string[]) => {
-            if (!node || typeof node !== 'object') return;
-            if (isDocLike(node)) {
-              // derive an id from path end
-              const id = path[path.length - 1] || `${Date.now()}`;
-              found.push({ path: [...path], id, data: node });
-              return;
-            }
-            for (const key of Object.keys(node)) {
-              try {
-                traverse(node[key], [...path, key]);
-              } catch {
-                // continue
-              }
-            }
-          };
-
-          traverse(data, []);
-          console.debug('[labresults] deep scan found', found.length, 'potential docs');
-
-          const groupsMap: Record<string, LabReport[]> = {};
-          for (const f of found) {
-            // try to find a date key in the path
-            const dateKeyFromPath = f.path.find(p => /^\d{4}-\d{2}-\d{2}$/.test(p));
-            let dateKey = dateKeyFromPath || (f.data && f.data.date) || (f.data && f.data.uploadedAt ? (new Date(f.data.uploadedAt).toISOString().slice(0, 10)) : 'unknown');
-            if (!dateKey) dateKey = 'unknown';
-            const parsed = parseReportFromData(f.id, f.data);
-            if (!groupsMap[dateKey]) groupsMap[dateKey] = [];
-            groupsMap[dateKey].push(parsed);
-          }
-
-          for (const dk of Object.keys(groupsMap)) {
-            let displayDate = dk;
-            try { displayDate = new Date(dk).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } catch {}
-            groups.push({ date: displayDate, reports: groupsMap[dk] });
-          }
-        }
-      } catch (e) {
-        console.error('[labresults] fallback read failed', e);
-      }
-      return groups.sort((a, b) => (a.date < b.date ? 1 : -1));
-    };
-
-    const loadForUid = async (uid: string) => {
-      console.debug('[labresults] loading labs for uid:', uid);
-      setLoading(true);
-      try {
-  // Mirror the vault retrieval: only read from the Patient collection first.
-  // Attempting to read Doctor collection often causes permission-denied logs in clients
-  // because patients don't have access to Doctor/{uid}. Keep retrieval behavior
-  // consistent with the vault reader which only reads Patient/{uid}.
-  const collectionsToTry = ['Patient'];
-        for (const collectionName of collectionsToTry) {
-          try {
-            const labsRef = db.collection(collectionName).doc(uid)
-              .collection('health').doc('history')
-              .collection('labs');
-
-            console.debug('[labresults] reading labs collection at', labsRef.path);
-            const dateDocs = await labsRef.get();
-            const groups: DateGroup[] = [];
-
-            for (const dateDoc of dateDocs.docs) {
-              const dateKey = dateDoc.id;
-              const docsCol = labsRef.doc(dateKey).collection('documents');
-              try {
-                console.debug('[labresults] reading documents at', docsCol.path);
-                const docsSnap = await docsCol.get();
-                const reports: LabReport[] = docsSnap.docs.map((d: any) => parseReportFromData(d.id, d.data() || {}));
-                let displayDate = dateKey;
-                try { displayDate = new Date(dateKey).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } catch {}
-                if (reports.length) groups.push({ date: displayDate, reports });
-              } catch (e: any) {
-                console.warn('[labresults] documents subcollection read failed for date', dateKey, e);
-                // If reading documents is permission-denied, break to try next collection
-                if (String(e).toLowerCase().includes('permission')) {
-                  break;
-                }
-              }
-            }
-
-            if (groups.length) return groups.sort((a, b) => (a.date < b.date ? 1 : -1));
-            // otherwise continue to try next collection (Doctor)
-          } catch (collectionErr: any) {
-            console.warn('[labresults] failed reading labs for collection', collectionName, collectionErr);
-            // if permission denied, try next collection
-            if (String(collectionErr).toLowerCase().includes('permission')) continue;
-          }
-        }
-
-        // If no groups found in any subcollection, attempt fallback read from the Patient user doc
-        const fbPatient = await fallbackReadFromUserDoc(uid);
-        if (fbPatient && fbPatient.length) return fbPatient;
-
-        // nothing found
-        return [] as DateGroup[];
-      } catch (e: any) {
-        console.error('[labresults] failed to load from subcollections', e);
-        if (String(e).toLowerCase().includes('permission')) {
-          // try fallback (patient doc)
-          const fb = await fallbackReadFromUserDoc(uid);
-          return fb;
-        }
-        return [] as DateGroup[];
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    const unsub = auth.onAuthStateChanged(async (user: any) => {
-      if (!mounted) return;
-      if (!user) {
-        setLabData([]);
-        setLoading(false);
-        return;
-      }
-      const groups = await loadForUid(user.uid);
-      if (mounted) setLabData(groups);
-    });
-
-    return () => { mounted = false; unsub(); };
+    loadAllLabReports();
   }, []);
+
+  const loadAllLabReports = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.debug('[labresults] Loading all lab reports from subcollections for user:', user.uid);
+      
+      const dateGroups = await fetchAllDateGroups(user.uid);
+      setLabData(dateGroups);
+      
+    } catch (error) {
+      console.error('[labresults] Failed to load lab reports:', error);
+      Alert.alert('Error', 'Failed to load lab reports');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllDateGroups = async (uid: string): Promise<DateGroup[]> => {
+    const dateGroups: DateGroup[] = [];
+    
+    try {
+      const labsRef = db.collection('Patient').doc(uid)
+        .collection('health').doc('history')
+        .collection('labs');
+
+      const dateDocs = await labsRef.get();
+      console.debug(`[labresults] Found ${dateDocs.size} date folders`);
+      
+      // Process each date folder sequentially to avoid overwhelming Firebase
+      for (const dateDoc of dateDocs.docs) {
+        const dateKey = dateDoc.id;
+        console.debug(`[labresults] Processing date folder: ${dateKey}`);
+        
+        try {
+          const docsCol = labsRef.doc(dateKey).collection('documents');
+          const docsSnap = await docsCol.get();
+          console.debug(`[labresults] Found ${docsSnap.size} documents for date ${dateKey}`);
+          
+          if (!docsSnap.empty) {
+            const reports: LabReport[] = [];
+            docsSnap.forEach(doc => {
+              const report = parseReportFromData(doc.id, doc.data(), dateKey);
+              reports.push(report);
+            });
+            
+            const displayDate = formatDisplayDate(dateKey);
+            dateGroups.push({
+              date: displayDate,
+              originalDate: dateKey,
+              reports: reports
+            });
+          }
+        } catch (docError) {
+          console.warn(`[labresults] Error reading documents for date ${dateKey}:`, docError);
+        }
+      }
+      
+      // Sort by date (newest first)
+      dateGroups.sort((a, b) => b.originalDate.localeCompare(a.originalDate));
+      console.debug(`[labresults] Final groups:`, dateGroups.map(g => ({ date: g.originalDate, count: g.reports.length })));
+      
+    } catch (error) {
+      console.error('[labresults] Subcollection fetch failed:', error);
+      throw error;
+    }
+    
+    return dateGroups;
+  };
+
+  const formatDisplayDate = (dateString: string): string => {
+    if (dateString === 'Unknown Date') return dateString;
+    
+    try {
+      return new Date(dateString).toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const parseReportFromData = (id: string, data: any, dateFolder: string): LabReport => {
+    const typeRaw = (data.type || '').toLowerCase();
+    const rtype: 'pdf' | 'image' = typeRaw.includes('pdf') ? 'pdf' : 
+                                  (typeRaw.startsWith('image') ? 'image' : 'pdf');
+    const base64 = data.contentBase64 || data.base64 || data.content;
+    const uri = base64 ? `data:${data.type || 'application/octet-stream'};base64,${base64}` : undefined;
+    
+    return {
+      id,
+      name: data.name || data.originalName || 'Lab Report',
+      results: Array.isArray(data.results) && data.results.length ? 
+               data.results : 
+               [{ name: data.name || 'Report', value: 0, unit: '', status: 'normal' }],
+      pdfUrl: rtype === 'pdf' ? uri : undefined,
+      imageUrl: rtype === 'image' ? uri : undefined,
+      type: rtype,
+      uploadedAt: data.uploadedAt || data.createdAt || data.date,
+      dateFolder: dateFolder
+    };
+  };
 
   const handleBack = () => {
     router.back();
   };
 
-  // hoist parser so other helpers (like fetchLabsByDate) can reuse it
-  const parseReportFromData = (id: string, data: any): LabReport => {
-    const typeRaw = (data.type || '').toLowerCase();
-    const rtype: 'pdf' | 'image' = typeRaw.includes('pdf') ? 'pdf' : (typeRaw.startsWith('image') ? 'image' : 'pdf');
-    const base64 = data.contentBase64 || data.base64 || data.content || undefined;
-    const uri = base64 ? `data:${data.type || 'application/octet-stream'};base64,${base64}` : undefined;
-    return {
-      id,
-      name: data.name || data.originalName || 'Lab Report',
-      results: Array.isArray(data.results) && data.results.length ? data.results : [{ name: data.name || 'Report', value: 0, unit: '', status: 'normal' }],
-      pdfUrl: rtype === 'pdf' ? uri : undefined,
-      imageUrl: rtype === 'image' ? uri : undefined,
-      type: rtype,
-    } as LabReport;
-  };
-
-  const getCurrentUid = () => auth.currentUser ? auth.currentUser.uid : null;
-
   const fetchLabsByDate = async (date: string) => {
-    const uid = getCurrentUid();
-    if (!uid) {
+    const user = auth.currentUser;
+    if (!user) {
       Alert.alert('Not signed in', 'You must be signed in to view lab reports.');
       return;
     }
@@ -246,56 +178,52 @@ export default function LabReports() {
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      Alert.alert('Invalid Format', 'Please use YYYY-MM-DD format');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Try subcollection path first
-      const docsSnap = await db.collection('Patient').doc(uid)
+      const reports: LabReport[] = [];
+      
+      const docsSnap = await db.collection('Patient').doc(user.uid)
         .collection('health').doc('history')
         .collection('labs').doc(date)
         .collection('documents').get();
 
-      const reports: LabReport[] = [];
       if (!docsSnap.empty) {
-        docsSnap.forEach(d => {
-          reports.push(parseReportFromData(d.id, d.data() || {}));
+        docsSnap.forEach(doc => {
+          reports.push(parseReportFromData(doc.id, doc.data(), date));
         });
+        
+        const displayDate = formatDisplayDate(date);
+        const groups: DateGroup[] = [{ 
+          date: displayDate, 
+          originalDate: date,
+          reports 
+        }];
+        setLabData(groups);
+        console.debug(`[labresults] Loaded ${reports.length} reports for date ${date}`);
       } else {
-        // Fallback nested map
-        const userDoc = await db.collection('Patient').doc(uid).get();
-        if (userDoc.exists) {
-          const data = userDoc.data() || {};
-          const labsMap = ((data as any).health || {}).history ? (((data as any).health || {}).history.labs || ((data as any).health || {}).history.lab) : null;
-          const dateNode = labsMap && labsMap[date] ? labsMap[date] : null;
-          const documentsNode = dateNode && dateNode.documents ? dateNode.documents : dateNode;
-          if (documentsNode && typeof documentsNode === 'object') {
-            for (const docId of Object.keys(documentsNode)) {
-              try {
-                reports.push(parseReportFromData(docId, documentsNode[docId]));
-              } catch (e) {
-                console.warn('[labresults] parse fallback doc failed', docId, e);
-              }
-            }
-          }
-        }
+        Alert.alert('No Reports', `No lab reports found for ${formatDisplayDate(date)}`);
+        loadAllLabReports(); // Go back to showing all reports
       }
-
-      const displayDate = (() => {
-        try { return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } catch { return date; }
-      })();
-
-      const groups: DateGroup[] = [];
-      if (reports.length) groups.push({ date: displayDate, reports });
-      setLabData(groups);
     } catch (e) {
-      console.error('[labresults] failed to load labs by date', e);
+      console.error('Failed to load labs by date', e);
       Alert.alert('Error', 'Failed to load lab reports for the selected date.');
+      loadAllLabReports(); // Go back to showing all reports on error
     } finally {
       setLoading(false);
     }
   };
 
   const handleLabReportPress = (report: LabReport) => {
-    // Navigate to detailed lab report view
+    if (navigating) return;
+    
+    setNavigating(report.id);
+    console.log(`[labresults] Navigating to detailed view for report: ${report.id} from date: ${report.dateFolder}`);
+
     router.push({
       pathname: '/patientProfile/labReports/detailedResult',
       params: {
@@ -303,9 +231,11 @@ export default function LabReports() {
         reportName: report.name,
         reportType: report.type,
         reportUrl: report.pdfUrl || report.imageUrl,
-        results: JSON.stringify(report.results)
+        results: JSON.stringify(report.results || [])
       }
     });
+
+    setTimeout(() => setNavigating(null), 1000);
   };
 
   const getStatusColor = (status: string): string => {
@@ -327,11 +257,31 @@ export default function LabReports() {
   const renderLabReportItem = (report: LabReport) => (
     <TouchableOpacity
       key={report.id}
-      style={styles.labReportContainer}
+      style={[
+        styles.labReportContainer,
+        navigating === report.id && { opacity: 0.7 }
+      ]}
       onPress={() => handleLabReportPress(report)}
       activeOpacity={0.7}
+      disabled={navigating !== null}
     >
-      {/* PDF/Image Preview */}
+      {navigating === report.id && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255,255,255,0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10,
+          borderRadius: 12
+        }}>
+          <ActivityIndicator size="small" color="#8B5CF6" />
+        </View>
+      )}
+
       <View style={styles.previewContainer}>
         {report.type === 'pdf' ? (
           <View style={styles.pdfPreview}>
@@ -346,7 +296,6 @@ export default function LabReports() {
         )}
       </View>
 
-      {/* Report Details */}
       <View style={styles.reportDetails}>
         <Text style={styles.reportName}>{report.name}</Text>
         {report.results.map((result, index) => (
@@ -364,8 +313,7 @@ export default function LabReports() {
               ]} />
             </View>
           </View>
-        )
-        )}
+        ))}
       </View>
     </TouchableOpacity>
   );
@@ -387,28 +335,18 @@ export default function LabReports() {
     </View>
   );
 
-  // No free-text filtering here — the date loader replaces the old search bar (matching viewhistory.tsx)
-
   return (
     <SafeAreaView style={styles.container}>
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-        </View>
-      ) : null}
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Feather name="chevron-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lab Reports</Text>
       </View>
 
-      {/* Date loader (like viewhistory) */}
-      <View style={{ paddingHorizontal: -10 }}>
+      {/* Date Search */}
+      <View style={{ paddingHorizontal: 16 }}>
         <View style={[styles.searchContainer, { marginTop: 8 }]}>
           <TextInput
             style={[styles.searchInput, { flex: 1 }]}
@@ -417,7 +355,17 @@ export default function LabReports() {
             value={dateKey}
             onChangeText={setDateKey}
           />
-          <TouchableOpacity style={{ marginLeft: 8, backgroundColor: '#8B5CF6', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, justifyContent: 'center' }} onPress={() => fetchLabsByDate(dateKey)}>
+          <TouchableOpacity 
+            style={{ 
+              marginLeft: 8, 
+              backgroundColor: '#8B5CF6', 
+              paddingHorizontal: 14, 
+              paddingVertical: 10, 
+              borderRadius: 8, 
+              justifyContent: 'center' 
+            }} 
+            onPress={() => fetchLabsByDate(dateKey)}
+          >
             <Text style={{ color: '#fff', fontWeight: '600' }}>Load</Text>
           </TouchableOpacity>
         </View>
@@ -451,22 +399,34 @@ export default function LabReports() {
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'results' ? (
-          <FlatList
-            data={labData}
-            renderItem={renderDateGroup}
-            keyExtractor={item => item.date}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
+        {loading ? (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#8B5CF6" />
+            <Text style={{ marginTop: 10, color: '#666' }}>Loading lab reports...</Text>
+          </View>
+        ) : activeTab === 'results' ? (
+          labData.length > 0 ? (
+            <FlatList
+              data={labData}
+              renderItem={renderDateGroup}
+              keyExtractor={item => item.originalDate}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666', textAlign: 'center' }}>
+                No lab reports found.{'\n'}Your reports will appear here once they are available.
+              </Text>
+            </View>
+          )
         ) : (
           renderHealthTrends()
         )}
       </ScrollView>
 
-      {/* Bottom Navigation */}
       <BottomNavigation
-        activeTab="none" // Using 'none' to indicate no active tab
+        activeTab="none"
         onTabPress={() => { }}
       />
     </SafeAreaView>

@@ -20,7 +20,7 @@ export default function VaultView() {
     const [hasMediaPermission, setHasMediaPermission] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const getCurrentUid = () => auth.currentUser ? auth.currentUser.uid : null;
-
+    const [sharingLoading, setSharingLoading] = useState(false);
     const [textContent, setTextContent] = useState<string | null>(null);
 
     useEffect(() => {
@@ -241,9 +241,6 @@ export default function VaultView() {
         }
 
         try {
-            // Show loading indicator
-            Alert.alert('Downloading', 'Please wait...', [], { cancelable: false });
-
             const fileExt = getFileExtension(doc.type || '');
             const tempFilePath = await createTempFileFromBase64(doc.contentBase64, fileExt);
 
@@ -279,7 +276,6 @@ export default function VaultView() {
         }
     };
 
-
     const handleShare = async () => {
         console.log('handleShare called, docId=', doc && doc.id);
         setShowOptionsMenu(false);
@@ -289,10 +285,9 @@ export default function VaultView() {
             return;
         }
 
-        try {
-            // Show loading indicator
-            Alert.alert('Preparing Share', 'Please wait...', [], { cancelable: false });
+        setSharingLoading(true);
 
+        try {
             const fileExt = getFileExtension(doc.type || '');
             const tempFilePath = await createTempFileFromBase64(doc.contentBase64, fileExt);
 
@@ -315,6 +310,7 @@ export default function VaultView() {
             const isSharingAvailable = await Sharing.isAvailableAsync();
             if (!isSharingAvailable) {
                 Alert.alert('Error', 'Sharing is not available on this device.');
+                setSharingLoading(false);
                 return;
             }
 
@@ -322,10 +318,10 @@ export default function VaultView() {
             await Sharing.shareAsync(shareablePath, {
                 mimeType: doc.type || 'application/octet-stream',
                 dialogTitle: `Share ${doc.name || 'Document'}`,
-                UTI: getUTIForFileType(doc.type) // iOS only
+                UTI: getUTIForFileType(doc.type)
             });
 
-            // Clean up temp files after a delay to ensure sharing is complete
+            // Clean up temp files after a delay
             setTimeout(async () => {
                 try {
                     await FileSystem.deleteAsync(tempFilePath);
@@ -344,6 +340,9 @@ export default function VaultView() {
                 'Could not share the file. Please try again.',
                 [{ text: 'OK' }]
             );
+        } finally {
+            // Ensure loading state is cleared even if there's an error
+            setSharingLoading(false);
         }
     };
 
