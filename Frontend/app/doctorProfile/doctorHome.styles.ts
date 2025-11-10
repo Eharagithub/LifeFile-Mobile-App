@@ -55,39 +55,57 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 
- 
- 
-  statsContainer: {
+  // Content styles
+  content: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+   
+  },
+
+  // Quick Actions styles
+  quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 10,
+    
+    backgroundColor: '#f2e6ff',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius:24,
   },
-  statCard: {
+  
+  actionButton: {
     alignItems: 'center',
+    width: '31%',
   },
-  statCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#8B52A8',
+  
+  actionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#7d4c9e',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
   },
-  statNumber: {
+  
+  actionText: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+    statNumber: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  statLabel: {
-    fontSize: 13,
-    color: '#333',
-    fontWeight: '500',
-  },
+
+// Consultations Section styles
   consultationsSection: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop: -15,
+    marginTop: -5,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     paddingHorizontal: 20,
@@ -124,6 +142,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+
+
   consultationsList: {
     flex: 1,
   },

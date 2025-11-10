@@ -59,10 +59,10 @@ export default function DoctorHome() {
           setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
           return;
         }
-        // Prefer patient data if available (this is the patient home)
+        // Prefer doctor data if available for the doctor home
         let roleToUse: 'patient' | 'doctor' | null = null;
-        if (roles.isPatient) roleToUse = 'patient';
-        else if (roles.isDoctor) roleToUse = 'doctor';
+        if (roles.isDoctor) roleToUse = 'doctor';
+        else if (roles.isPatient) roleToUse = 'patient';
 
         if (!roleToUse) {
           setUserProfile({ fullName: 'Guest User', firstName: 'Guest', lastName: 'User', profilePicture: '' });
@@ -71,9 +71,14 @@ export default function DoctorHome() {
 
         const userResult = await AuthService.getUserData(userId, roleToUse);
         if (userResult.success && userResult.data) {
-          const personalData = userResult.data.personal || {} as any;
-          const fullName = personalData.fullName || 'Guest';
-          const nameParts = fullName.trim().split(' ');
+          const data = userResult.data as any;
+          const personalData = data.personal || {} as any;
+          // fallback chain for fullName: personal.fullName -> data.fullName -> auth.displayName -> email local-part
+          let fullName = personalData.fullName || data.fullName || '';
+          if (!fullName && auth.currentUser?.displayName) fullName = auth.currentUser.displayName;
+          if (!fullName && data.email) fullName = (data.email.split('@')[0] || '');
+
+          const nameParts = (fullName || '').trim().split(' ');
           const firstName = nameParts[0] || '';
           const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
@@ -81,7 +86,7 @@ export default function DoctorHome() {
             fullName,
             firstName,
             lastName,
-            profilePicture: personalData.profilePicture || ''
+            profilePicture: personalData.profilePicture || data.profilePicture || ''
           });
         } else {
           console.error('Error fetching user data:', userResult.error);
@@ -137,89 +142,135 @@ export default function DoctorHome() {
     },
   ];
 
+  // Navigate to create patient screen (adjust route as needed)
+  const handleCreatePatient = () => {
+    // Update the route target if your create-patient screen lives elsewhere
+    router.push('./createpatient');
+  };
+
   return (
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#E8D5F2" />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#E8D5F2" />
 
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View style={styles.profileSection}>
-            {userProfile.profilePicture ? (
-              <Image
-                source={{ uri: userProfile.profilePicture }}
-                style={styles.profileImage}
-                defaultSource={require('../../assets/images/profile.jpg')}
-              />
-            ) : (
-              <Image
-                source={require('../../assets/images/profile.jpg')}
-                style={styles.profileImage}
-              />
-            )}
-            <View style={styles.welcomeText}>
-              <Text style={styles.welcomeTitle}>Welcome!</Text>
-              <Text style={styles.userName}>Dr. Nisuni Singhapura</Text>
-              <Text style={styles.welcomeSubtitle}>Now connected with your patients today</Text>
-            </View>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <View style={styles.profileSection}>
+          {userProfile.profilePicture ? (
+            <Image
+              source={{ uri: userProfile.profilePicture }}
+              style={styles.profileImage}
+              defaultSource={require('../../assets/images/profile.jpg')}
+            />
+          ) : (
+            <Image
+              source={require('../../assets/images/profile.jpg')}
+              style={styles.profileImage}
+            />
+          )}
+          <View style={styles.welcomeText}>
+            <Text style={styles.welcomeTitle}>Welcome!</Text>
+            <Text style={styles.userName}>{
+              (userProfile.fullName && userProfile.fullName.trim())
+                ? (userProfile.fullName.trim().toLowerCase().startsWith('dr') ? userProfile.fullName : `Dr. ${userProfile.fullName}`)
+                : (userProfile.firstName ? `Dr. ${userProfile.firstName}` : 'Doctor')
+            }</Text>
+            <Text style={styles.welcomeSubtitle}>Now connected with your patients today</Text>
           </View>
         </View>
+      </View>
 
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <View style={styles.statCircle}>
-              <Text style={styles.statNumber}>6</Text>
-            </View>
-            <Text style={styles.statLabel}>Total Patients</Text>
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+        // onPress={handleViewHistory}
+        >
+          <View style={styles.actionIconContainer}>
+            <Text style={styles.statNumber}>6</Text>
           </View>
-          <View style={styles.statCard}>
-            <View style={styles.statCircle}>
-              <Text style={styles.statNumber}>6</Text>
-            </View>
-            <Text style={styles.statLabel}>Upcomings</Text>
+          <Text style={styles.actionText}>Total Patients</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+        // onPress={handleMedications}
+        >
+          <View style={styles.actionIconContainer}>
+            <Text style={styles.statNumber}>6</Text>
           </View>
-        </View>
+          <Text style={styles.actionText}>Upcomings</Text>
+        </TouchableOpacity>
+
+      </View>
+
+
+
       {/* Consultations Section */}
       <View style={styles.consultationsSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Consultations</Text>
-        <TouchableOpacity>
-          <Text style={styles.seeAllText}>See all</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Consultations</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#B8B8B8" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by Name..."
-          placeholderTextColor="#B8B8B8"
-        />
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#B8B8B8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by Name..."
+            placeholderTextColor="#B8B8B8"
+          />
+        </View>
 
-      {/* Consultations List */}
-      <ScrollView style={styles.consultationsList} showsVerticalScrollIndicator={false}>
-        {consultations.map((consultation) => (
-          <View key={consultation.id} style={styles.consultationItem}>
-            <View style={styles.consultationLeft}>
-              <View style={styles.avatar}>
-                <Ionicons name="person-outline" size={28} color="#9E9E9E" />
+        {/* Consultations List */}
+        <ScrollView style={styles.consultationsList} showsVerticalScrollIndicator={false}>
+          {consultations.map((consultation) => (
+            <View key={consultation.id} style={styles.consultationItem}>
+              <View style={styles.consultationLeft}>
+                <View style={styles.avatar}>
+                  <Ionicons name="person-outline" size={28} color="#9E9E9E" />
+                </View>
+                <View style={styles.consultationInfo}>
+                  <Text style={styles.patientName}>{consultation.name}</Text>
+                  <Text style={styles.appointmentTime}>{consultation.time}</Text>
+                  <Text style={styles.appointmentDate}>{consultation.date}</Text>
+                </View>
               </View>
-              <View style={styles.consultationInfo}>
-                <Text style={styles.patientName}>{consultation.name}</Text>
-                <Text style={styles.appointmentTime}>{consultation.time}</Text>
-                <Text style={styles.appointmentDate}>{consultation.date}</Text>
-              </View>
+              <TouchableOpacity style={styles.bookmarkButton}>
+                <Ionicons name="bookmark-outline" size={22} color="#8B7BA8" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.bookmarkButton}>
-              <Ionicons name="bookmark-outline" size={22} color="#8B7BA8" />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
+          ))}
+        </ScrollView>
+      </View>
 
+      {/* Floating action button: create patient */}
+      <TouchableOpacity
+        onPress={handleCreatePatient}
+        accessibilityLabel="Create patient"
+        style={{
+          position: 'absolute',
+          right: 20,
+          bottom: 80, // place above bottom navigation
+          backgroundColor: '#874691',
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 6,
+          zIndex: 20,
+        }}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+  
       {/* Bottom Navigation */}
       <BottomNavigation activeTab="home" />
 
@@ -227,4 +278,3 @@ export default function DoctorHome() {
   );
 }
 
-  
