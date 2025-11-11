@@ -13,7 +13,7 @@ import {
   Dimensions,
   StyleSheet
 } from 'react-native';
-import { Feather, } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 // Firebase imports
 import { db, auth } from '../../../../../config/firebaseConfig';

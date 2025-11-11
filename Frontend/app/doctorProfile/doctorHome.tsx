@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import styles from './doctorHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
 import { useRouter } from 'expo-router';
-import { auth } from '../../config/firebaseConfig';
+import { auth, db } from '../../config/firebaseConfig';
 import AuthService from '../../services/authService';
 
 interface UserProfile {
@@ -27,6 +27,8 @@ interface Consultation {
   name: string;
   time: string;
   date: string;
+  status?: string;
+  patientId?: string;
 }
 
 export default function DoctorHome() {
@@ -115,37 +117,59 @@ export default function DoctorHome() {
 
 
 
-  const consultations: Consultation[] = [
-    {
-      id: '1',
-      name: 'Sachini Ilanrika',
-      time: 'Late appointment',
-      date: 'Jun 10, 2023',
-    },
-    {
-      id: '2',
-      name: 'Sumith Singhapura',
-      time: '10:30am',
-      date: 'Jun 10, 2023',
-    },
-    {
-      id: '3',
-      name: 'Shashiri Sudeshini',
-      time: '11:00am',
-      date: 'Jun 10, 2023',
-    },
-    {
-      id: '4',
-      name: 'Jamuli Kehara',
-      time: '11:30am',
-      date: 'Jun 10, 2023',
-    },
-  ];
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
 
-  // Navigate to create patient screen (adjust route as needed)
+  // Listen to patients created by this doctor and update the list in real-time
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    try {
+      // Listen to the doctor's patients subcollection: Doctor/{doctorId}/patients
+      const q = db.collection('Doctor').doc(currentUser.uid).collection('patients');
+      const unsubscribe = q.onSnapshot((snapshot) => {
+        const items: Consultation[] = snapshot.docs.map((doc) => {
+          const data: any = doc.data();
+          // createdAt may be stored as ISO string — attempt to format
+          let date = '';
+          try {
+            if (data.createdAt) {
+              // Handle Firestore Timestamp or ISO string
+              let d: Date;
+              if (data.createdAt.toDate) {
+                d = data.createdAt.toDate();
+              } else {
+                d = new Date(data.createdAt);
+              }
+              date = d.toLocaleDateString();
+            }
+          } catch {
+            date = '';
+          }
+
+          return {
+            id: doc.id,
+            name: data.fullName || '',
+            time: data.time || '',
+            date,
+            status: data.status || '',
+            patientId: data.patientId || undefined,
+          };
+        });
+        setConsultations(items);
+      }, (err) => {
+        console.error('Error listening to patients:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Error setting up patients listener:', err);
+    }
+  }, []);
+
+  // Navigate to create patient page (keeps form and logic in createPatient.tsx)
   const handleCreatePatient = () => {
-    // Update the route target if your create-patient screen lives elsewhere
-    router.push('./createpatient');
+    router.push('./createPatient');
   };
 
   return (
@@ -186,7 +210,7 @@ export default function DoctorHome() {
         // onPress={handleViewHistory}
         >
           <View style={styles.actionIconContainer}>
-            <Text style={styles.statNumber}>6</Text>
+            <Text style={styles.statNumber}>{consultations.length}</Text>
           </View>
           <Text style={styles.actionText}>Total Patients</Text>
         </TouchableOpacity>
@@ -236,6 +260,9 @@ export default function DoctorHome() {
                   <Text style={styles.patientName}>{consultation.name}</Text>
                   <Text style={styles.appointmentTime}>{consultation.time}</Text>
                   <Text style={styles.appointmentDate}>{consultation.date}</Text>
+                  {consultation.status ? (
+                    <Text style={[styles.appointmentDate, { color: '#B9770E' }]}>{consultation.status}</Text>
+                  ) : null}
                 </View>
               </View>
               <TouchableOpacity style={styles.bookmarkButton}>
