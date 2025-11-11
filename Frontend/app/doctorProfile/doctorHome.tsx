@@ -251,7 +251,21 @@ export default function DoctorHome() {
         {/* Consultations List */}
         <ScrollView style={styles.consultationsList} showsVerticalScrollIndicator={false}>
           {consultations.map((consultation) => (
-            <View key={consultation.id} style={styles.consultationItem}>
+            <TouchableOpacity
+              key={consultation.id}
+              style={styles.consultationItem}
+              onPress={() => {
+                // Navigate to patient dashboard, pass patientId (fallback to consultation id)
+                const pid = consultation.patientId || consultation.id;
+                try {
+                  router.push({ pathname: './patientDashboard', params: { patientId: pid } });
+                } catch (e) {
+                  // Fallback to string path with query param and log the error
+                  console.warn('router.push with params failed, falling back to query string:', e);
+                  router.push(`./patientDashboard?patientId=${encodeURIComponent(pid)}`);
+                }
+              }}
+            >
               <View style={styles.consultationLeft}>
                 <View style={styles.avatar}>
                   <Ionicons name="person-outline" size={28} color="#9E9E9E" />
@@ -265,10 +279,16 @@ export default function DoctorHome() {
                   ) : null}
                 </View>
               </View>
-              <TouchableOpacity style={styles.bookmarkButton}>
+              <TouchableOpacity
+                style={styles.bookmarkButton}
+                onPress={() => {
+                  // Bookmark action placeholder
+                  console.log('Bookmark toggled for', consultation.id);
+                }}
+              >
                 <Ionicons name="bookmark-outline" size={22} color="#8B7BA8" />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
