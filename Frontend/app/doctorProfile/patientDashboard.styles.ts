@@ -430,4 +430,19 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
+    historyContainer: {
+    paddingHorizontal: 16,
+},
+
+diagnosisItem: {
+    marginBottom: 20,
+},
+
+diagnosisDate: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 8,
+    marginLeft: 4,
+},
 });

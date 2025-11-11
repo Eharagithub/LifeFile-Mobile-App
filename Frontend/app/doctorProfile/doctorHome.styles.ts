@@ -15,8 +15,6 @@ const styles = StyleSheet.create({
     
   },
   
-  
-  
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -192,6 +190,7 @@ const styles = StyleSheet.create({
   bookmarkButton: {
     padding: 5,
   },
+
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
