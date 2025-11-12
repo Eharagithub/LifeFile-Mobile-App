@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { auth } from '../../config/firebaseConfig';
+import AuthService from '../../services/authService';
 import SideNavigationDrawer from './sideNavigation';
 
 interface BottomNavigationProps {
@@ -16,6 +18,7 @@ export default function BottomNavigation({
 }: BottomNavigationProps) {
   const router = useRouter();
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [isDoctor, setIsDoctor] = useState<boolean>(false);
 
   // Only highlight tab if on these pages
   const highlightTabs = ['home', 'notification', 'Chat', 'more'];
@@ -25,15 +28,22 @@ export default function BottomNavigation({
     onTabPress(tabName);
     switch (tabName) {
       case 'home':
-        router.push('../../../patientProfile/patientHome');
+        if (isDoctor) router.push('/doctorProfile/doctorHome');
+        else router.push('../../../patientProfile/patientHome');
         break;
 
       case 'notification':
-        router.push('../../../patientProfile/notification');
+        if (isDoctor) router.push('/doctorProfile/docnotification');
+        else router.push('../../../patientProfile/notification');
         break;
+
+      // accept both 'chat' and legacy 'ChatMyProfile'
+      case 'chat':
       case 'ChatMyProfile':
-        router.push('../../../patientProfile/chat');
+        if (isDoctor) router.push('/doctorProfile/docChatbot');
+        else router.push('../../../patientProfile/chat');
         break;
+
       case 'more':
         setIsDrawerVisible(true);
         break;
@@ -41,6 +51,27 @@ export default function BottomNavigation({
         break;
     }
   };
+
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user || !user.uid) return;
+        const roles = await AuthService.determineRoles(user.uid);
+        setIsDoctor(!!(roles && roles.isDoctor));
+      } catch (err) {
+        console.warn('Failed to determine roles for bottom nav:', err);
+        setIsDoctor(false);
+      }
+    };
+    checkRole();
+
+    if (global.EventEmitter) {
+      const handler = () => checkRole();
+      global.EventEmitter.on('USER_CHANGED', handler);
+      return () => global.EventEmitter.off('USER_CHANGED', handler);
+    }
+  }, []);
 
   return (
     <>

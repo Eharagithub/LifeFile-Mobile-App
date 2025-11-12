@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import { useRouter } from 'expo-router';
 import { auth } from '../../config/firebaseConfig';
 import { signOut } from 'firebase/auth';
 import styles from './sideNavigation.styles';
-import { push } from 'expo-router/build/global-state/routing';
+ 
+import AuthService from '../../services/authService';
 
 interface SideNavigationProps {
   isVisible: boolean;
@@ -42,6 +43,7 @@ export default function SideNavigation({
   onClose
 }: SideNavigationProps) {
   const router = useRouter();
+  const [isDoctor, setIsDoctor] = useState<boolean>(false);
 
   const handleSignOut = async () => {
     try {
@@ -60,7 +62,6 @@ export default function SideNavigation({
       Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');
     }
   };
-
   const navigationItems: NavigationItem[] = [
     {
       id: '1',
@@ -107,6 +108,54 @@ export default function SideNavigation({
       isLogout: true
     }
   ];
+
+  // Doctor-specific reduced menu
+  const doctorNavigationItems: NavigationItem[] = [
+    {
+      id: '1',
+      title: 'Home',
+      icon: 'home',
+      iconLibrary: 'Feather',
+      route: '/doctorProfile/doctorHome'
+    },
+    {
+      id: '2',
+      title: 'Profile',
+      icon: 'user',
+      iconLibrary: 'Feather',
+      route: '/auth/Auth/createDocProfile'
+    },
+    {
+      id: '8',
+      title: 'Logout',
+      icon: 'log-out',
+      iconLibrary: 'Feather',
+      action: handleSignOut,
+      isLogout: true
+    }
+  ];
+
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user || !user.uid) return;
+        const roles = await AuthService.determineRoles(user.uid);
+        if (roles && roles.isDoctor) setIsDoctor(true);
+        else setIsDoctor(false);
+      } catch (err) {
+        console.warn('Failed to determine roles for side nav:', err);
+        setIsDoctor(false);
+      }
+    };
+    checkRole();
+    // also listen for global user change events if available
+    if (global.EventEmitter) {
+      const handler = () => checkRole();
+      global.EventEmitter.on('USER_CHANGED', handler);
+      return () => global.EventEmitter.off('USER_CHANGED', handler);
+    }
+  }, []);
 
   const handleItemPress = (item: NavigationItem) => {
     if (item.action) {
@@ -211,7 +260,7 @@ export default function SideNavigation({
               style={styles.navigationContainer}
               showsVerticalScrollIndicator={false}
             >
-              {navigationItems.map(renderNavigationItem)}
+              {(isDoctor ? doctorNavigationItems : navigationItems).map(renderNavigationItem)}
             </ScrollView>
           </SafeAreaView>
         </View>

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons , Feather} from '@expo/vector-icons';
 import styles from './doctorHome.styles';
 import BottomNavigation from '../common/BottomNavigation';
 import { useRouter } from 'expo-router';
@@ -272,7 +272,6 @@ export default function DoctorHome() {
                 </View>
                 <View style={styles.consultationInfo}>
                   <Text style={styles.patientName}>{consultation.name}</Text>
-                  <Text style={styles.appointmentTime}>{consultation.time}</Text>
                   <Text style={styles.appointmentDate}>{consultation.date}</Text>
                   {consultation.status ? (
                     <Text style={[styles.appointmentDate, { color: '#B9770E' }]}>{consultation.status}</Text>
@@ -286,7 +285,7 @@ export default function DoctorHome() {
                   console.log('Bookmark toggled for', consultation.id);
                 }}
               >
-                <Ionicons name="bookmark-outline" size={22} color="#8B7BA8" />
+                <Feather name="chevron-right" size={16} color="#7d4c9e" />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
