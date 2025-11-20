@@ -37,11 +37,11 @@ export default function BottomNavigation({
         else router.push('../../../patientProfile/notification');
         break;
 
-      // accept both 'chat' and legacy 'ChatMyProfile'
+      // Chat - navigate to proper chat page for both roles
       case 'chat':
       case 'ChatMyProfile':
         if (isDoctor) router.push('/doctorProfile/docChatbot');
-        else router.push('../../../patientProfile/chat');
+        else router.push('../../../patientProfile/chatBot');
         break;
 
       case 'more':

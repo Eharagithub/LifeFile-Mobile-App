@@ -11,214 +11,115 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  dateText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+  backButton: {
+    padding: 8,
   },
-  todayLabel: {
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1E293B',
   },
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileText: {
-    fontSize: 16,
-  },
-  content: {
+  loadingContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-  },
-  
-  // Horizontal Calendar Styles
-  calendarContainer: {
-    marginBottom: 20,
-  },
-  calendarScrollContent: {
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-  },
-  calendarDayContainer: {
-    alignItems: 'center',
-    marginHorizontal: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    minWidth: 60,
-  },
-  selectedDayContainer: {
-    backgroundColor: '#8B5CF6',
-  },
-  dayName: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  selectedDayName: {
-    color: '#FFFFFF',
-  },
-  dayNumberContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  notificationsList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: 'flex-start',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  unreadNotification: {
+    backgroundColor: '#f5f5ff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#7d4c9e',
+  },
+  notificationIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
     marginBottom: 4,
   },
-  selectedDayNumber: {
-    backgroundColor: '#FFFFFF',
-  },
-  todayDayNumber: {
-    backgroundColor: '#E2E8F0',
-  },
-  dayNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  selectedDayNumberText: {
-    color: '#8B5CF6',
-  },
-  todayDayNumberText: {
-    color: '#8B5CF6',
-  },
-  eventIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#8B5CF6',
-    marginTop: 2,
-  },
-  
-  // Task List Styles
-  taskList: {
-    gap: 12,
-  },
-  taskItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  notificationMessage: {
+    fontSize: 14,
+    color: '#64748B',
     marginBottom: 8,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  taskTime: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  taskSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 12,
     lineHeight: 20,
   },
-  avatarContainer: {
+  visitDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 8,
+    gap: 6,
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+  visitDetailsText: {
+    fontSize: 13,
+    color: '#7d4c9e',
+    fontWeight: '500',
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  unreadIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#7d4c9e',
+    marginLeft: 8,
+    marginTop: 4,
+  },
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    paddingHorizontal: 32,
   },
-  avatarText: {
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 16,
+  },
+  emptySubtext: {
     fontSize: 14,
-  },
-  moreButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-  },
-  
-  // Empty State
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  
-  // Bottom Navigation
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  navItem: {
-    padding: 12,
-  },
-  addButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#8B5CF6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    color: '#94A3B8',
+    marginTop: 8,
   },
 });

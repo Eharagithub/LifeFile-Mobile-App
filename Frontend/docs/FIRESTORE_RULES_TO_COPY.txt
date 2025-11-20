@@ -1,0 +1,108 @@
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isDoctorUser() {
+      return request.auth != null && exists(/databases/$(database)/documents/Doctor/$(request.auth.uid));
+    }
+    
+    // Check if doctor is authorized to access this patient's records
+    function isDoctorAuthorized(patientId) {
+      return request.auth != null && 
+             isDoctorUser() &&
+             exists(/databases/$(database)/documents/Patient/$(patientId)/doctors/$(request.auth.uid));
+    }
+
+    // PATIENT - allow owner to create / read / write their doc and all subcollections
+    match /Patient/{patientId} {
+      // Patient can create/read/write their own document
+      allow create: if isOwner(patientId);
+      allow read, write, update, delete: if isOwner(patientId);
+      
+      // Authorized doctors can READ/WRITE patient records
+      allow read, write, update, delete: if isDoctorAuthorized(patientId);
+      
+      // Allow doctors to read Patient collection to search for existing patients
+      // This is needed for the createPatient flow to find existing patients
+      allow read: if isDoctorUser();
+
+      // personal subcollection - patient owns, authorized doctors can read/write
+      match /personal/{doc} {
+        allow read, write, update, delete: if isOwner(patientId);
+        allow read, write, update, delete: if isDoctorAuthorized(patientId);
+        // Allow doctors to read personal data when searching for existing patients by NIC
+        allow read: if isDoctorUser();
+      }
+
+      // health collection - allow all nested documents and collections
+      match /health/{healthDoc} {
+        allow read, write, update, delete: if isOwner(patientId);
+        allow read, write, update, delete: if isDoctorAuthorized(patientId);
+
+        // activemedications document and nested collections
+        match /activemedications/{document=**} {
+          allow read, write, update, delete: if isOwner(patientId);
+          allow read, write, update, delete: if isDoctorAuthorized(patientId);
+        }
+
+        // visitSchedule document and nested collections
+        match /visitSchedule/{document=**} {
+          allow read, write, update, delete: if isOwner(patientId);
+          allow read, write, update, delete: if isDoctorAuthorized(patientId);
+        }
+
+        // Any other nested documents and collections under health
+        match /{document=**} {
+          allow read, write, update, delete: if isOwner(patientId);
+          allow read, write, update, delete: if isDoctorAuthorized(patientId);
+        }
+      }
+
+      // notifications collection - patients can read/write, doctors can create/write
+      match /notifications/{notificationId} {
+        allow read, write, update, delete: if isOwner(patientId);
+        allow create, write, update: if isDoctorAuthorized(patientId);
+        allow read: if isDoctorAuthorized(patientId);
+      }
+
+      // doctors subcollection - tracks which doctors are authorized
+      match /doctors/{doctorId} {
+        allow read, write, delete: if isOwner(patientId);
+        // Allow doctor to create/write their own authorization entry during OTP verification
+        allow create, write: if request.auth.uid == doctorId && isDoctorUser();
+        // Allow doctor to read their own authorization
+        allow read: if request.auth.uid == doctorId;
+      }
+    }
+
+    // DOCTOR - allow owner to manage their profile and patient links
+    match /Doctor/{userId} {
+      allow create: if isOwner(userId);
+      allow read, write, update, delete: if isOwner(userId);
+    }
+    
+    match /Doctor/{userId}/{document=**} {
+      allow create, read, write, update, delete: if isOwner(userId);
+    }
+    
+    // publicPatients - for NEW patients who don't have Patient record yet
+    match /publicPatients/{docId} {
+      allow read: if isDoctorUser();
+      allow create: if isDoctorUser();
+      allow update, delete: if request.auth != null
+                            && resource.data.invitedByDoctor == request.auth.uid;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```

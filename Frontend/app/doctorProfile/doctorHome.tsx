@@ -7,6 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons , Feather} from '@expo/vector-icons';
 import styles from './doctorHome.styles';
@@ -39,7 +42,12 @@ export default function DoctorHome() {
     lastName: '',
     profilePicture: ''
   });
-  // (navigation handlers can be added here if needed)
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [selectedLinkId, setSelectedLinkId] = useState<string>('');
+  const [selectedPatientName, setSelectedPatientName] = useState<string>('');
   // Fetch user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -115,14 +123,13 @@ export default function DoctorHome() {
     return () => unsubscribe();
   }, [router]);
 
-
-
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-
   // Listen to patients created by this doctor and update the list in real-time
   useEffect(() => {
     const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) {
+      setConsultations([]);
+      return;
+    }
 
     try {
       // Listen to the doctor's patients subcollection: Doctor/{doctorId}/patients
@@ -157,8 +164,11 @@ export default function DoctorHome() {
           };
         });
         setConsultations(items);
-      }, (err) => {
-        console.error('Error listening to patients:', err);
+      }, (err: any) => {
+        // Only log error if it's not a permission error during logout
+        if (err.code !== 'permission-denied') {
+          console.error('Error listening to patients:', err);
+        }
       });
 
       return () => unsubscribe();
@@ -172,9 +182,223 @@ export default function DoctorHome() {
     router.push('./createPatient');
   };
 
+  // Handle OTP verification before navigating to patient dashboard
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      Alert.alert('Error', 'Please enter a 6-digit code');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const doctorId = auth.currentUser?.uid;
+      if (!doctorId || !selectedLinkId) {
+        Alert.alert('Error', 'Invalid session');
+        setOtpLoading(false);
+        return;
+      }
+
+      // Fetch the stored OTP code from verification document
+      const verifyRef = await db
+        .collection('Doctor')
+        .doc(doctorId)
+        .collection('patients')
+        .doc(selectedLinkId)
+        .collection('verification')
+        .doc('sms')
+        .get();
+
+      if (!verifyRef.exists) {
+        Alert.alert('Error', 'Verification code not found');
+        setOtpLoading(false);
+        return;
+      }
+
+      const verifyData = verifyRef.data();
+      if (verifyData?.code === otpCode) {
+        // OTP is correct - update patient status to verified
+        await db
+          .collection('Doctor')
+          .doc(doctorId)
+          .collection('patients')
+          .doc(selectedLinkId)
+          .update({
+            status: 'verified',
+            verifiedAt: new Date().toISOString(),
+          });
+
+        // Get the patientId to create authorization
+        const linkDoc = await db
+          .collection('Doctor')
+          .doc(doctorId)
+          .collection('patients')
+          .doc(selectedLinkId)
+          .get();
+        
+        const patientId = linkDoc.data()?.patientId;
+        
+        // CREATE AUTHORIZATION: Add doctor to Patient/doctors subcollection
+        if (patientId) {
+          console.log('🔐 Creating doctor authorization for patient:', patientId, 'doctor:', doctorId);
+          try {
+            await db
+              .collection('Patient')
+              .doc(patientId)
+              .collection('doctors')
+              .doc(doctorId)
+              .set({
+                status: 'authorized',
+                linkId: selectedLinkId,
+                authorizedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+              });
+            console.log('✅ Doctor authorization created successfully');
+          } catch (authErr) {
+            console.error('❌ Error creating doctor authorization:', authErr);
+            Alert.alert('Authorization Error', 'Failed to create doctor authorization. Please contact support.');
+            setOtpLoading(false);
+            return;
+          }
+        } else {
+          console.error('❌ No patientId found in link document');
+          Alert.alert('Error', 'Patient ID not found. Please try again.');
+          setOtpLoading(false);
+          return;
+        }
+
+        // Mark verification as verified
+        await db
+          .collection('Doctor')
+          .doc(doctorId)
+          .collection('patients')
+          .doc(selectedLinkId)
+          .collection('verification')
+          .doc('sms')
+          .update({
+            verified: true,
+            verifiedAt: new Date().toISOString(),
+          });
+
+        setShowOtpModal(false);
+        setOtpCode('');
+        Alert.alert('Success', 'Patient verified successfully!');
+        
+        // Navigate to patient dashboard after verification
+        setTimeout(() => {
+          router.push({ 
+            pathname: './patientDashboard', 
+            params: { linkId: selectedLinkId } 
+          });
+        }, 500);
+      } else {
+        Alert.alert('Invalid Code', 'The verification code does not match. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error verifying OTP:', err);
+      Alert.alert('Error', 'Failed to verify OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Handle patient card click - show OTP modal if pending, navigate if verified
+  const handlePatientClick = (consultation: Consultation) => {
+    if (consultation.status === 'pending') {
+      // Show OTP modal for pending patients
+      setSelectedLinkId(consultation.id);
+      setSelectedPatientName(consultation.name);
+      setOtpCode('');
+      setShowOtpModal(true);
+    } else {
+      // Navigate directly for verified or invited patients
+      router.push({ 
+        pathname: './patientDashboard', 
+        params: { linkId: consultation.id } 
+      });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8D5F2" />
+
+      {/* OTP Verification Modal */}
+      <Modal
+        visible={showOtpModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !otpLoading && setShowOtpModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 24, width: '80%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8 }}>
+              Verify Patient
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+              Enter OTP for {selectedPatientName}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#999', marginBottom: 16 }}>
+              The verification code was sent to the patient&apos;s phone number
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: '#D1D5DB',
+                borderRadius: 8,
+                padding: 12,
+                fontSize: 16,
+                marginBottom: 16,
+                textAlign: 'center',
+                letterSpacing: 2,
+              }}
+              placeholder="000000"
+              value={otpCode}
+              onChangeText={setOtpCode}
+              maxLength={6}
+              keyboardType="numeric"
+              editable={!otpLoading}
+            />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  backgroundColor: '#E5E7EB',
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  setShowOtpModal(false);
+                  setOtpCode('');
+                }}
+                disabled={otpLoading}
+              >
+                <Text style={{ fontWeight: '600', color: '#374151' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  backgroundColor: '#8B5CF6',
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+                onPress={handleVerifyOtp}
+                disabled={otpLoading || otpCode.length !== 6}
+              >
+                {otpLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ fontWeight: '600', color: '#fff' }}>Verify</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Header Section */}
       <View style={styles.header}>
@@ -254,17 +478,7 @@ export default function DoctorHome() {
             <TouchableOpacity
               key={consultation.id}
               style={styles.consultationItem}
-              onPress={() => {
-                // Navigate to patient dashboard, pass patientId (fallback to consultation id)
-                const pid = consultation.patientId || consultation.id;
-                try {
-                  router.push({ pathname: './patientDashboard', params: { patientId: pid } });
-                } catch (e) {
-                  // Fallback to string path with query param and log the error
-                  console.warn('router.push with params failed, falling back to query string:', e);
-                  router.push(`./patientDashboard?patientId=${encodeURIComponent(pid)}`);
-                }
-              }}
+              onPress={() => handlePatientClick(consultation)}
             >
               <View style={styles.consultationLeft}>
                 <View style={styles.avatar}>
@@ -274,7 +488,23 @@ export default function DoctorHome() {
                   <Text style={styles.patientName}>{consultation.name}</Text>
                   <Text style={styles.appointmentDate}>{consultation.date}</Text>
                   {consultation.status ? (
-                    <Text style={[styles.appointmentDate, { color: '#B9770E' }]}>{consultation.status}</Text>
+                    <View style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      backgroundColor: consultation.status === 'verified' ? '#4CAF50' : (consultation.status === 'pending' ? '#FF9800' : '#2196F3'),
+                      alignSelf: 'flex-start',
+                      marginTop: 4,
+                    }}>
+                      <Text style={{ 
+                        color: '#fff', 
+                        fontSize: 12, 
+                        fontWeight: '600',
+                        textTransform: 'capitalize'
+                      }}>
+                        {consultation.status === 'verified' ? 'Verified ✓' : (consultation.status === 'pending' ? 'Pending' : 'Invited')}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               </View>

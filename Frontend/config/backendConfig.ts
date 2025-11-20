@@ -5,3 +5,7 @@ function envBackendUrl(): string | undefined {
 }
 
 export const BACKEND_BASE_URL: string = envBackendUrl() || 'http://10.181.219.156:8001';
+
+export function getBackendUrl(): string {
+  return BACKEND_BASE_URL;
+}

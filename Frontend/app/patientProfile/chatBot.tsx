@@ -19,6 +19,7 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { chatService } from '../../services/chatService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,18 +30,18 @@ export interface ChatMessage {
   time: string;
 }
 
-interface DoctorChatBotModalProps {
+interface ChatBotModalProps {
   isVisible: boolean;
   onClose: () => void;
 }
 
-function DoctorChatBotModal({ isVisible, onClose }: DoctorChatBotModalProps) {
+function ChatBotModal({ isVisible, onClose }: ChatBotModalProps) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
       type: 'bot',
-      text: "Hello Doctor! I'm your LifeFile clinical assistant. How can I help you manage your patients today?",
+      text: "Hi! I'm your LifeFile health assistant. How can I help you track your health today?",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -64,27 +65,34 @@ function DoctorChatBotModal({ isVisible, onClose }: DoctorChatBotModalProps) {
   const getBotResponse = async (userMessage: string): Promise<string> => {
     const msg = userMessage.toLowerCase();
     
-    // Doctor-specific queries
-    if (msg.includes('patient') || msg.includes('patients')) {
-      return "I can help you manage your patients. Would you like to:\n• View patient list\n• Search for a specific patient\n• Access patient medical history\n• Send a consultation message?";
-    }
-    else if (msg.includes('consultation') || msg.includes('appointment')) {
-      return "I can help with consultations and appointments. You can:\n• View upcoming consultations\n• Schedule new appointments\n• Update consultation notes\n• Set reminders for patients";
-    }
-    else if (msg.includes('prescription') || msg.includes('medicine')) {
-      return "I can assist with prescriptions. You can:\n• Create new prescriptions\n• View prescription history\n• Send prescriptions to patients\n• Track medication compliance";
-    }
-    else if (msg.includes('report') || msg.includes('analysis')) {
-      return "I can help with medical reports and patient data analysis:\n• Generate patient reports\n• View health trends\n• Export patient data\n• Create clinical summaries";
-    }
-    else if (msg.includes('help') || msg.includes('what can you do')) {
-      return "As your clinical assistant, I can help with:\n• Patient Management\n• Consultations & Appointments\n• Prescription Management\n• Medical Reports & Analysis\n• Patient Communication\n• Health Records Review";
-    }
-    else if (msg.includes('notification') || msg.includes('alert')) {
-      return "I can help manage notifications:\n• Patient health alerts\n• Appointment reminders\n• Follow-up reminders\n• Emergency notifications";
-    }
-    else {
-      return "I'm here to assist with your clinical practice. You can ask me about:\n• Managing patients\n• Consultations and appointments\n• Prescriptions\n• Medical reports\n• Patient health records\n• Communication with patients";
+    // Check if the message is about symptoms or health concerns
+    if (msg.includes('experiencing') || 
+        msg.includes('symptoms') || 
+        msg.includes('feeling') || 
+        msg.includes('pain') || 
+        msg.includes('sick') ||
+        msg.includes('unwell') ||
+        msg.includes('suffering') ||
+        msg.includes('fever') ||
+        msg.includes('headache') ||
+        msg.includes('fatigue')) {
+      console.log('Detected health concern, routing to prediction service...');
+      // Use the chatService for health-related queries
+      return await chatService.processHealthQuery(userMessage);
+    } 
+    // Handle other types of queries
+    else if (msg.includes('blood pressure') || msg.includes('bp')) {
+      return "I can help you log your blood pressure readings. What were your systolic and diastolic numbers?";
+    } else if (msg.includes('weight')) {
+      return "Great! I'll help you track your weight. What's your current weight?";
+    } else if (msg.includes('medication') || msg.includes('medicine')) {
+      return "I can help you manage your medications. Would you like to add a new medication or check your current schedule?";
+    } else if (msg.includes('appointment')) {
+      return "I can help you track upcoming appointments. When is your next doctor visit?";
+    } else if (msg.includes('help') || msg.includes('what can you do')) {
+      return "I can help you with:\n• Analyzing symptoms and health concerns\n• Logging vital signs (blood pressure, weight, etc.)\n• Managing medications\n• Tracking appointments\n• General health questions";
+    } else {
+      return "I'm here to help with your health tracking needs. You can tell me about any symptoms you're experiencing, or ask about logging vitals, medications, appointments, or any health-related questions!";
     }
   };
 
@@ -105,13 +113,13 @@ function DoctorChatBotModal({ isVisible, onClose }: DoctorChatBotModalProps) {
     const typingMessage: ChatMessage = {
       id: messages.length + 2,
       type: 'bot',
-      text: '🤔 Processing your request...',
+      text: '🤔 Analyzing your health concern...',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, typingMessage]);
 
     try {
-      console.log('Processing doctor message:', message);
+      console.log('Processing message:', message);
       // Get bot response
       const responseText = await getBotResponse(message);
       console.log('Received response:', responseText);
@@ -184,8 +192,8 @@ function DoctorChatBotModal({ isVisible, onClose }: DoctorChatBotModalProps) {
             {/* Chat Header */}
             <View style={styles.chatHeader}>
               <View style={styles.headerLeft}>
-                <Feather name={'stethoscope' as any} size={20} color="#dbc2f5ff" />
-                <Text style={styles.headerTitle}>Clinical Assistant</Text>
+                <Feather name="activity" size={20} color="#dbc2f5ff" />
+                <Text style={styles.headerTitle}>Health Assistant</Text>
               </View>
               <TouchableOpacity 
                 onPress={onClose}
@@ -351,7 +359,7 @@ const styles = StyleSheet.create({
 });
 
 // Main page component that renders the modal
-export default function DoctorChatBotPage() {
+export default function ChatBotPage() {
   const router = useRouter();
   const [chatVisible, setChatVisible] = useState(true);
 
@@ -363,7 +371,7 @@ export default function DoctorChatBotPage() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <DoctorChatBotModal isVisible={chatVisible} onClose={handleClose} />
+      <ChatBotModal isVisible={chatVisible} onClose={handleClose} />
     </SafeAreaView>
   );
 }
