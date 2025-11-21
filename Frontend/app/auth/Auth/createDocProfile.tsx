@@ -143,7 +143,7 @@ export default function CreateDocProfile() {
 
             Alert.alert('Account Created', 'Your doctor account has been created successfully');
             // Navigate to login or doctor home — default to login
-            router.push('/auth/login');
+            router.push('/doctorProfile/doctorHome');
         } catch (err) {
             console.error('Complete registration error', err);
             Alert.alert('Error', 'Failed to complete registration. Please try again.');
