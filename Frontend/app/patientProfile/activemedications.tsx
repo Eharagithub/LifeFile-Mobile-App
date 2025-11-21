@@ -217,7 +217,7 @@ export default function ActiveMedications() {
                     />
                     <Text style={styles.emptyText}>No active medications</Text>
                     <Text style={styles.emptySubtext}>
-                        Your prescriptions will appear here
+                        Your prescribed medications will appear here
                     </Text>
                 </View>
             )}

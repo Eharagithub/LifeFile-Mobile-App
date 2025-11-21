@@ -290,7 +290,7 @@ export default function ViewHistory() {
         >
           <Feather name="chevron-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Medical History Time Line</Text>
+        <Text style={styles.headerTitle}>Medical History Records</Text>
       </View>
 
       {/* Vault loader by date */}
@@ -323,7 +323,7 @@ export default function ViewHistory() {
         <View style={{ paddingHorizontal: 20 }}>
           {vaultItems.length === 0 ? (
             <Text style={{ color: '#6c757d', marginVertical: 8 }}>
-              {dateKey ? 'No documents for selected date.' : 'No documents in your vault.'}
+              {dateKey ? 'No documents for selected date.' : 'No documents in your medical records.'}
             </Text>
           ) : (
             <SectionList

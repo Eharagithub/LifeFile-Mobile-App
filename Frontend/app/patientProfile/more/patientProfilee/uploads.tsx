@@ -234,7 +234,7 @@ const Uploads: React.FC = () => {
                     // Saved via nested-map fallback — subcollection/tab not created
                     Alert.alert('Uploaded (fallback)', 'Report saved but Firestore subcollection could not be created due to permissions. The record is stored inside your user document. To get a separate "labs" collection/tab, allow subcollection writes in Firestore rules.');
                 } else {
-                    Alert.alert('Uploaded', category === 'reports' ? 'Report uploaded to your lab history.' : 'File uploaded to your medical vault.');
+                    Alert.alert('Uploaded', category === 'reports' ? 'Report uploaded to your lab history.' : 'File uploaded to your medical records.');
                 }
                 // clear selected file after success
                 if (category === 'medical') setMedicalVaultFile(null);
@@ -249,10 +249,10 @@ const Uploads: React.FC = () => {
                 try {
                     const listRes = await authService.listLabDocuments(uid, dateKey, role);
                     if (listRes.success) {
-                        Alert.alert('Verification', `Lab documents found in subcollection: ${listRes.count}`);
+                       // Alert.alert('Verification', `Lab documents found in subcollection: ${listRes.count}`);
                     } else {
                         // likely permissions prevented reading the subcollection
-                        Alert.alert('Verification', `Unable to read labs subcollection: ${listRes.error}`);
+                       // Alert.alert('Verification', `Unable to read labs subcollection: ${listRes.error}`);
                     }
                 } catch (e) {
                     console.warn('Verification read failed', e);
@@ -301,7 +301,7 @@ const Uploads: React.FC = () => {
                 showsVerticalScrollIndicator={false}
             >
                 <FileUploadSection
-                    title="Medical Vault"
+                    title="Diagnosis Information"
                     description="Upload Diagnosis Cards, Prescriptions, etc."
                     onFileSelect={setMedicalVaultFile}
                     selectedFile={medicalVaultFile}
@@ -311,7 +311,7 @@ const Uploads: React.FC = () => {
                 />
 
                 <FileUploadSection
-                    title="My Reports"
+                    title="Lab Reports"
                     description="Upload Lab Reports"
                     onFileSelect={setReportsFile}
                     selectedFile={reportsFile}
@@ -321,7 +321,7 @@ const Uploads: React.FC = () => {
                 />
 
                 <NavigationItem
-                    title="Search Past Lab Records"
+                    title="Past Lab Reports"
                     onPress={handleSearchPastLabRecords}
                     iconName="search"
                     iconColor="#673AB7"
@@ -329,7 +329,7 @@ const Uploads: React.FC = () => {
                 />
 
                 <NavigationItem
-                    title="Go to Past Medical History"
+                    title="Previous Diagnosis"
                     onPress={handleGoToPastMedicalHistory}
                     iconName="time"
                     iconColor="#673AB7"

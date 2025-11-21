@@ -404,7 +404,7 @@ export default function PatientHome() {
           <View style={styles.actionIconContainer}>
             <FontAwesome name="file-text-o" size={22} color="#fff" />
           </View>
-          <Text style={styles.actionText}>Lab Results</Text>
+          <Text style={styles.actionText}>Lab Reports</Text>
         </TouchableOpacity>
       </View>
 

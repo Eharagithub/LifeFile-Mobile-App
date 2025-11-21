@@ -296,7 +296,7 @@ const NotificationScreen: React.FC = () => {
         >
           <Feather name="chevron-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>Alerts</Text>
         <TouchableOpacity onPress={handleRefresh}>
           <MaterialCommunityIcons
             name="refresh"
@@ -322,7 +322,7 @@ const NotificationScreen: React.FC = () => {
       ) : (
         <View style={styles.emptyContainer}>
           <MaterialCommunityIcons name="bell-off" size={64} color="#ddd" />
-          <Text style={styles.emptyText}>No notifications</Text>
+          <Text style={styles.emptyText}>No Alerts</Text>
           <Text style={styles.emptySubtext}>You&apos;re all caught up!</Text>
         </View>
       )}
