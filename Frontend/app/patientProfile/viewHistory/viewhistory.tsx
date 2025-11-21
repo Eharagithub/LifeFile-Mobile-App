@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   SectionList,
+  ScrollView,
   ActivityIndicator,
   Image,
   Alert,
@@ -15,17 +16,52 @@ import { useRouter } from 'expo-router';
 import styles from './viewhistory.styles';
 import { db, auth } from '../../../config/firebaseConfig';
 import BottomNavigation from '../../common/BottomNavigation';
+//import { ScrollView } from 'react-native-reanimated/lib/typescript/Animated';
 
-// history item shape is defined inline where needed
+// Vault record interface
+interface VaultRecord {
+  id: string;
+  name: string;
+  originalName?: string;
+  type: string;
+  size: number;
+  date: string;
+  uploadedAt: string;
+  contentBase64?: string;
+}
 
 export default function ViewHistory() {
   const router = useRouter();
-  
+
   const [dateKey, setDateKey] = useState(''); // expect YYYY-MM-DD
   const [loading, setLoading] = useState(false);
-  const [vaultItems, setVaultItems] = useState<any[]>([]);
+  const [vaultItems, setVaultItems] = useState<VaultRecord[]>([]);
   const [previewBase64, setPreviewBase64] = useState<string | null>(null);
 
+
+  // Format date string for display (e.g., "2024-11-20" -> "Nov 20, 2024")
+  const formatDateForDisplay = (dateStr: string): string => {
+    try {
+      const date = new Date(dateStr + 'T00:00:00Z');
+      if (isNaN(date.getTime())) return dateStr;
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Format file size for display
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
 
   const handleBack = () => {
     router.back();
@@ -33,94 +69,137 @@ export default function ViewHistory() {
 
   const getCurrentUid = () => auth.currentUser ? auth.currentUser.uid : null;
 
-  // Fetch all vault documents for the authenticated user across both
-  // possible storage shapes. Uses the same robust pattern as labresults.tsx.
+
+
+  // Fetch all vault documents for the authenticated user with optimized parallel loading
   const fetchAllVault = async (uid: string) => {
     setLoading(true);
     setVaultItems([]);
     setPreviewBase64(null);
 
-    const groups: { date: string; items: any[] }[] = [];
+    const groups: Map<string, VaultRecord[]> = new Map();
 
     try {
-      // Attempt to read vault subcollections under Patient/{uid}/health/history/vault
-      try {
-        const vaultRef = db.collection('Patient').doc(uid)
-          .collection('health').doc('history')
-          .collection('vault');
+      // Generate dates to check (past 90 days)
+      const today = new Date();
+      const datesToTry: string[] = [];
+      for (let i = 0; i < 90; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        datesToTry.push(date.toISOString().split('T')[0]);
+      }
 
-        console.debug('[viewhistory] reading vault collection at', vaultRef.path);
-        const dateDocs = await vaultRef.get();
+      console.log(`[viewhistory] Loading records...`);
 
-        for (const dateDoc of dateDocs.docs) {
-          const dateKey = dateDoc.id;
-          const docsCol = vaultRef.doc(dateKey).collection('documents');
-          try {
-            console.debug('[viewhistory] reading documents at', docsCol.path);
-            const docsSnap = await docsCol.get();
-            const items = docsSnap.docs.map((d: any) => ({ id: d.id, date: dateKey, ...(d.data() || {}) }));
-            if (items.length) groups.push({ date: dateKey, items });
-          } catch (e: any) {
-            console.warn('[viewhistory] documents subcollection read failed for date', dateKey, e);
-            if (String(e).toLowerCase().includes('permission')) {
-              // permission denied reading docs for this date; skip this date and continue
-              continue;
+      // Fetch dates in parallel (batched by 10 to avoid overwhelming Firebase)
+      const batchSize = 10;
+      for (let i = 0; i < datesToTry.length; i += batchSize) {
+        const batch = datesToTry.slice(i, i + batchSize);
+        const promises = batch.map(dateKey =>
+          db.collection('Patient').doc(uid)
+            .collection('health').doc('history')
+            .collection('vault').doc(dateKey)
+            .collection('documents').get()
+            .then(docsSnap => ({ dateKey, docsSnap }))
+            .catch(() => ({ dateKey, docsSnap: null }))
+        );
+
+        const results = await Promise.all(promises);
+        results.forEach(({ dateKey, docsSnap }) => {
+          if (docsSnap && !docsSnap.empty) {
+            const items: VaultRecord[] = [];
+            docsSnap.forEach((d: any) => {
+              const data = d.data() || {};
+              items.push({
+                id: d.id,
+                name: data.name || data.originalName || 'Document',
+                originalName: data.originalName,
+                type: data.type || '',
+                size: data.size || 0,
+                date: dateKey,
+                uploadedAt: data.uploadedAt || '',
+                contentBase64: data.contentBase64,
+              });
+            });
+
+            if (items.length > 0) {
+              items.sort((a, b) => {
+                const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+                const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+                return timeB - timeA;
+              });
+              groups.set(dateKey, items);
             }
           }
-        }
-      } catch (collectionErr: any) {
-        console.warn('[viewhistory] vault subcollection read failed', collectionErr);
+        });
       }
 
       // If nothing found via subcollections, fallback to reading nested map on user document
-      if (groups.length === 0) {
-        console.debug('[viewhistory] falling back to reading nested health.history.vault from user doc');
+      if (groups.size === 0) {
+        console.log('[viewhistory] Checking fallback...');
         try {
           const userDoc = await db.collection('Patient').doc(uid).get();
           if (userDoc.exists) {
             const data = userDoc.data() || {};
             const nested = (((data as any).health || {}).history || {}).vault || {};
+
             Object.keys(nested).forEach(date => {
               const dateNode = nested[date];
               if (dateNode && dateNode.documents) {
                 const docsMap = dateNode.documents;
-                const items: any[] = [];
+                const items: VaultRecord[] = [];
                 Object.keys(docsMap).forEach(key => {
-                  items.push({ id: key, date, ...(docsMap[key] || {}) });
+                  const doc = docsMap[key];
+                  items.push({
+                    id: key,
+                    name: doc.name || doc.originalName || 'Document',
+                    originalName: doc.originalName,
+                    type: doc.type || '',
+                    size: doc.size || 0,
+                    date,
+                    uploadedAt: doc.uploadedAt || '',
+                    contentBase64: doc.contentBase64,
+                  });
                 });
-                if (items.length) groups.push({ date, items });
+                if (items.length > 0) {
+                  items.sort((a, b) => {
+                    const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+                    const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+                    return timeB - timeA;
+                  });
+                  groups.set(date, items);
+                }
               }
             });
           }
         } catch (err) {
-          console.warn('[viewhistory] nested vault read failed', err);
+          console.warn('[viewhistory] Fallback read error:', err);
         }
       }
 
-      // Flatten groups into vaultItems and sort groups and items
-      groups.forEach(g => {
-        g.items.sort((a, b) => {
-          const ta = a.uploadedAt && a.uploadedAt.seconds ? a.uploadedAt.seconds : 0;
-          const tb = b.uploadedAt && b.uploadedAt.seconds ? b.uploadedAt.seconds : 0;
-          return (tb || 0) - (ta || 0);
-        });
+      // Build sorted array - newest dates first
+      const sortedDates = Array.from(groups.keys()).sort((a, b) => {
+        const dateA = new Date(a).getTime();
+        const dateB = new Date(b).getTime();
+        return dateB - dateA; // Descending order (newest first)
       });
 
-      groups.sort((a, b) => {
-        const da = Date.parse(a.date) || 0;
-        const db2 = Date.parse(b.date) || 0;
-        return (db2 || 0) - (da || 0);
+      const allItems: VaultRecord[] = [];
+      sortedDates.forEach(date => {
+        const items = groups.get(date) || [];
+        allItems.push(...items);
       });
 
-      // Build flat list but keep date on items
-      const combined: any[] = [];
-      groups.forEach(g => combined.push(...g.items));
-      console.debug('[viewhistory] found vault items count:', combined.length, 'groups:', groups.length);
-      // debug first few items
-      console.debug('[viewhistory] sample items:', combined.slice(0, 10).map((it: any) => ({ id: it.id, date: it.date })) );
-      setVaultItems(combined);
+      console.log(`[viewhistory] =================================`);
+      console.log(`[viewhistory] FINAL RESULT: Successfully loaded ${allItems.length} total vault records across ${sortedDates.length} dates`);
+      if (sortedDates.length > 0) {
+        console.log(`[viewhistory] Dates found:`, sortedDates);
+      }
+      console.log(`[viewhistory] =================================`);
+      setVaultItems(allItems);
     } catch (err) {
-      console.error('[viewhistory] Failed to load all vault documents:', err);
+      console.error('[viewhistory] Failed to load vault documents:', err);
+      Alert.alert('Error', 'Failed to load medical records. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -162,10 +241,21 @@ export default function ViewHistory() {
         .collection('vault').doc(date)
         .collection('documents').get();
 
-      const results: any[] = [];
+      const results: VaultRecord[] = [];
+
       if (!docsSnap.empty) {
         docsSnap.forEach(d => {
-          results.push({ id: d.id, date, ...(d.data() || {}) });
+          const data = d.data() || {};
+          results.push({
+            id: d.id,
+            name: data.name || data.originalName || 'Document',
+            originalName: data.originalName,
+            type: data.type || '',
+            size: data.size || 0,
+            date,
+            uploadedAt: data.uploadedAt || '',
+            contentBase64: data.contentBase64,
+          });
         });
       } else {
         // Fallback: check nested map on user document
@@ -177,20 +267,36 @@ export default function ViewHistory() {
           if (dateNode && dateNode.documents) {
             const docsMap = dateNode.documents;
             Object.keys(docsMap).forEach(key => {
-              results.push({ id: key, date, ...(docsMap[key] || {}) });
+              const doc = docsMap[key];
+              results.push({
+                id: key,
+                name: doc.name || doc.originalName || 'Document',
+                originalName: doc.originalName,
+                type: doc.type || '',
+                size: doc.size || 0,
+                date,
+                uploadedAt: doc.uploadedAt || '',
+                contentBase64: doc.contentBase64,
+              });
             });
           }
         }
       }
 
-      // sort by uploadedAt (if present) or by id timestamp
+      // Sort by uploadedAt (newest first)
       results.sort((a, b) => {
-        const ta = a.uploadedAt && a.uploadedAt.seconds ? a.uploadedAt.seconds : (a.uploadedAt ? Date.parse(a.uploadedAt) / 1000 : parseInt(a.id || '0', 10));
-        const tb = b.uploadedAt && b.uploadedAt.seconds ? b.uploadedAt.seconds : (b.uploadedAt ? Date.parse(b.uploadedAt) / 1000 : parseInt(b.id || '0', 10));
-        return (tb || 0) - (ta || 0);
+        const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return timeB - timeA;
       });
 
-      setVaultItems(results.slice(0, 20)); // show latest 20
+      setVaultItems(results);
+
+      if (results.length === 0) {
+        Alert.alert('No documents', `No documents found for ${formatDateForDisplay(date)}`);
+      } else {
+        console.log(`[viewhistory] Found ${results.length} documents for date ${date}`);
+      }
     } catch (err) {
       console.error('Failed to load vault documents:', err);
       Alert.alert('Error', 'Failed to load documents.');
@@ -203,78 +309,65 @@ export default function ViewHistory() {
 
 
 
-  const renderVaultItem = ({ item }: { item: any }) => (
+  const renderVaultItem = ({ item }: { item: VaultRecord }) => (
     <View style={styles.historyItem}>
       <View style={styles.iconContainer}>
         <FontAwesome5 name="file-medical" size={20} color="#7d4c9e" />
       </View>
       <View style={styles.itemContent}>
-        <Text style={styles.itemDate}>{item.date || dateKey}</Text>
-        <Text style={styles.itemTitle}>{item.name || item.title || 'Document'}</Text>
-        <Text style={styles.itemSubtitle}>{item.type || ''} • {item.size || ''} bytes</Text>
+        <Text style={styles.itemDate}>{formatDateForDisplay(item.date)}</Text>
+        <Text style={styles.itemTitle} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.itemSubtitle}>{item.type || 'Medical Record'} • {formatFileSize(item.size)}</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => router.push({ pathname: '/patientProfile/viewHistory/vault', params: { uid: getCurrentUid(), date: item.date, docId: item.id } })} style={{ marginRight: 12 }}>
+        <TouchableOpacity
+          onPress={() => router.push({
+            pathname: '/patientProfile/viewHistory/vault',
+            params: {
+              uid: getCurrentUid(),
+              date: item.date,
+              docId: item.id
+            }
+          })}
+          style={{ marginRight: 12 }}
+        >
           <Feather name="chevron-right" size={20} color="#ccc" />
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // Group vaultItems by date into sections for SectionList
+  // Group vaultItems by date into sections for SectionList - sorted by date descending (newest first)
   const sections = useMemo(() => {
-    const map = new Map<string, any[]>();
+    const map = new Map<string, VaultRecord[]>();
 
-    const getItemDateString = (item: any) => {
-      if (!item) return 'Unknown';
-      if (item.date && typeof item.date === 'string') return item.date;
-      const uploaded = item.uploadedAt;
-      if (!uploaded) return 'Unknown';
-      // Firestore Timestamp-like with seconds
-      if (uploaded.seconds && typeof uploaded.seconds === 'number') {
-        return new Date(uploaded.seconds * 1000).toISOString().slice(0, 10);
-      }
-      // Timestamp-like with _seconds (some serializations)
-      if (uploaded._seconds && typeof uploaded._seconds === 'number') {
-        return new Date(uploaded._seconds * 1000).toISOString().slice(0, 10);
-      }
-      // If toDate exists and is a function
-      if (typeof uploaded.toDate === 'function') {
-        try {
-          return uploaded.toDate().toISOString().slice(0, 10);
-        } catch {
-          // fallthrough
-        }
-      }
-      // If it's an ISO string or parseable
-      if (typeof uploaded === 'string') {
-        const parsed = Date.parse(uploaded);
-        if (!isNaN(parsed)) return new Date(parsed).toISOString().slice(0, 10);
-      }
-      return 'Unknown';
-    };
-
+    // Group items by date
     vaultItems.forEach(item => {
-      const date = getItemDateString(item);
+      const date = item.date || 'Unknown';
       if (!map.has(date)) map.set(date, []);
       map.get(date)!.push(item);
     });
 
-    // Build array sorted by date desc
+    // Build array and sort by date descending (newest first)
     const arr = Array.from(map.entries()).map(([date, items]) => {
-      // sort items in a section by uploadedAt desc
+      // Ensure items in each section are sorted by uploadedAt descending
       items.sort((a, b) => {
-        const ta = a.uploadedAt && a.uploadedAt.seconds ? a.uploadedAt.seconds : 0;
-        const tb = b.uploadedAt && b.uploadedAt.seconds ? b.uploadedAt.seconds : 0;
-        return (tb || 0) - (ta || 0);
+        const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return timeB - timeA;
       });
-      return { title: date, data: items };
+      return {
+        title: date,
+        displayDate: formatDateForDisplay(date),
+        data: items
+      };
     });
 
+    // Sort sections by date descending (newest first)
     arr.sort((a, b) => {
-      const da = Date.parse(a.title) || 0;
-      const db = Date.parse(b.title) || 0;
-      return (db || 0) - (da || 0);
+      const dateA = new Date(a.title).getTime();
+      const dateB = new Date(b.title).getTime();
+      return dateB - dateA;
     });
 
     return arr;
@@ -307,6 +400,8 @@ export default function ViewHistory() {
         </TouchableOpacity>
       </View>
 
+      {/* Scrollable Document Retrieval Section */}
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
       {loading ? <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 12 }} /> : null}
 
       {previewBase64 ? (
@@ -318,29 +413,33 @@ export default function ViewHistory() {
         </View>
       ) : null}
 
-      {/* Vault Items */}
-        <View style={styles.content}>
-        <View style={{ paddingHorizontal: 20 }}>
-          {vaultItems.length === 0 ? (
-            <Text style={{ color: '#6c757d', marginVertical: 8 }}>
-              {dateKey ? 'No documents for selected date.' : 'No documents in your medical records.'}
-            </Text>
-          ) : (
-            <SectionList
-              sections={sections}
-              keyExtractor={(item, index) => `${item.date || 'unknown'}|${item.id || index}`}
-              renderItem={renderVaultItem}
-              renderSectionHeader={({ section: { title } }) => (
-                <View style={{ paddingVertical: 8 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>{title}</Text>
-                </View>
-              )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          )}
-        </View>
-        </View>
 
+        {/* Vault Items */}
+        <View style={styles.content}>
+          <View style={{ paddingHorizontal: 20 }}>
+            {vaultItems.length === 0 ? (
+              <Text style={{ color: '#6c757d', marginVertical: 8 }}>
+                {dateKey ? `No documents for ${formatDateForDisplay(dateKey)}.` : 'No documents in your medical records. Start uploading diagnosis records and lab reports.'}
+              </Text>
+            ) : (
+              <SectionList
+                sections={sections}
+                keyExtractor={(item, index) => `${item.date || 'unknown'}|${item.id || index}`}
+                renderItem={renderVaultItem}
+                renderSectionHeader={({ section: { displayDate, title } }: any) => (
+                  <View style={{ paddingVertical: 12, marginTop: 8 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>
+                      {displayDate || title}
+                    </Text>
+                  </View>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        </View>
+      </ScrollView>
       {/* Bottom Navigation */}
       <BottomNavigation
         activeTab="none" // Using 'none' to indicate no active tab

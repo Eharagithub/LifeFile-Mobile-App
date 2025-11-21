@@ -50,6 +50,7 @@ export default function LabReports() {
 
   useEffect(() => {
     loadAllLabReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAllLabReports = async () => {
@@ -79,24 +80,34 @@ export default function LabReports() {
     const dateGroups: DateGroup[] = [];
     
     try {
-      const labsRef = db.collection('Patient').doc(uid)
-        .collection('health').doc('history')
-        .collection('labs');
-
-      const dateDocs = await labsRef.get();
-      console.debug(`[labresults] Found ${dateDocs.size} date folders`);
+      console.log('[labresults] Loading lab records...');
       
-      // Process each date folder sequentially to avoid overwhelming Firebase
-      for (const dateDoc of dateDocs.docs) {
-        const dateKey = dateDoc.id;
-        console.debug(`[labresults] Processing date folder: ${dateKey}`);
-        
-        try {
-          const docsCol = labsRef.doc(dateKey).collection('documents');
-          const docsSnap = await docsCol.get();
-          console.debug(`[labresults] Found ${docsSnap.size} documents for date ${dateKey}`);
-          
-          if (!docsSnap.empty) {
+      // Generate dates to try (past 90 days)
+      const today = new Date();
+      const datesToTry: string[] = [];
+      
+      for (let i = 0; i < 90; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        datesToTry.push(date.toISOString().split('T')[0]);
+      }
+      
+      // Fetch dates in parallel (batched by 10 to avoid overwhelming Firebase)
+      const batchSize = 10;
+      for (let i = 0; i < datesToTry.length; i += batchSize) {
+        const batch = datesToTry.slice(i, i + batchSize);
+        const promises = batch.map(dateKey =>
+          db.collection('Patient').doc(uid)
+            .collection('health').doc('history')
+            .collection('labs').doc(dateKey)
+            .collection('documents').get()
+            .then(docsSnap => ({ dateKey, docsSnap }))
+            .catch(() => ({ dateKey, docsSnap: null }))
+        );
+
+        const results = await Promise.all(promises);
+        results.forEach(({ dateKey, docsSnap }) => {
+          if (docsSnap && !docsSnap.empty) {
             const reports: LabReport[] = [];
             docsSnap.forEach(doc => {
               const report = parseReportFromData(doc.id, doc.data(), dateKey);
@@ -110,17 +121,16 @@ export default function LabReports() {
               reports: reports
             });
           }
-        } catch (docError) {
-          console.warn(`[labresults] Error reading documents for date ${dateKey}:`, docError);
-        }
+        });
       }
       
       // Sort by date (newest first)
       dateGroups.sort((a, b) => b.originalDate.localeCompare(a.originalDate));
-      console.debug(`[labresults] Final groups:`, dateGroups.map(g => ({ date: g.originalDate, count: g.reports.length })));
+      
+      console.log(`[labresults] Loaded ${dateGroups.reduce((sum, g) => sum + g.reports.length, 0)} lab reports`);
       
     } catch (error) {
-      console.error('[labresults] Subcollection fetch failed:', error);
+      console.error('[labresults] Unexpected error during fetch:', error);
       throw error;
     }
     

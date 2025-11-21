@@ -137,7 +137,7 @@ const ProfilePage: React.FC<PatientProfileScreenProps> = ({ navigation }) => {
   const menuItems: MenuItem[] = [
     {
       id: 'saved',
-      title: 'My Saved',
+      title: 'My History',
       icon: 'heart-outline',
       color: '#673AB7',
       route: '/patientProfile/viewHistory/viewhistory'
